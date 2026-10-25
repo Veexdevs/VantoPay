@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>VantoPay - Seu dinheiro, seu ritmo</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    @keyframes slideInLeft {
+      from { opacity: 0; transform: translateX(-30px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+    @keyframes scaleIn {
+      from { opacity: 0; transform: scale(0.8); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    @keyframes logoSpin {
+      from { transform: rotate(-180deg) scale(0); }
+      to { transform: rotate(0) scale(1); }
+    }
+    @keyframes progressFill {
+      from { width: 0%; }
+      to { width: 100%; }
+    }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-5px); }
+    }
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #F0F0F0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+
+    .phone-frame {
+      width: 390px;
+      height: 844px;
+      background: #FFFFFF;
+      border-radius: 40px;
+      overflow: hidden;
+      box-shadow: 0 20px 80px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.05);
+      position: relative;
+    }
+
+    .phone-screen {
+      width: 100%;
+      height: 100%;
+      overflow-y: auto;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    .phone-screen::-webkit-scrollbar { width: 0; }
+
+    /* Splash Screen */
+    .splash {
+      position: absolute;
+      inset: 0;
+      background: #FFFFFF;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      animation: fadeOut 0.5s ease 3.5s forwards;
+    }
+    @keyframes fadeOut {
+      to { opacity: 0; pointer-events: none; }
+    }
+    .splash-logo {
+      animation: logoSpin 1.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    }
+    .splash-title {
+      font-size: 42px;
+      font-weight: 800;
+      color: #000;
+      letter-spacing: -1px;
+      margin-top: 20px;
+      opacity: 0;
+      animation: fadeIn 0.6s ease 0.8s forwards;
+    }
+    .splash-sub {
+      font-size: 13px;
+      color: #888;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      margin-top: 4px;
+      opacity: 0;
+      animation: fadeIn 0.6s ease 1s forwards;
+    }
+    .splash-progress {
+      position: absolute;
+      bottom: 80px;
+      width: 60%;
+      height: 3px;
+      background: #E8E8E8;
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .splash-progress-bar {
+      height: 100%;
+      background: #000;
+      border-radius: 2px;
+      animation: progressFill 1.8s ease 1.2s forwards;
+      width: 0%;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 48px 24px 20px;
+      animation: slideDown 0.5s ease 3.5s both;
+    }
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 22px;
+      background: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+    .greeting { font-size: 13px; color: #888; }
+    .user-name { font-size: 17px; font-weight: 700; color: #000; }
+    .notif-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 22px;
+      background: #F5F5F5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .notif-btn:hover { transform: scale(0.95); }
+    .notif-badge {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: 8px;
+      height: 8px;
+      background: #000;
+      border-radius: 4px;
+      border: 2px solid #fff;
+    }
+
+    /* Balance Card */
+    .card-section {
+      padding: 0 24px;
+      animation: scaleIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 3.6s both;
+    }
+    .balance-card {
+      background: #000;
+      border-radius: 24px;
+      padding: 24px;
+      min-height: 200px;
+      color: #fff;
+      position: relative;
+      overflow: hidden;
+      cursor: pointer;
+      transition: transform 0.3s ease;
+    }
+    .balance-card:hover { transform: scale(0.98); }
+    .card-decor1 {
+      position: absolute;
+      top: -30px; right: -30px;
+      width: 120px; height: 120px;
+      border-radius: 60px;
+      border: 30px solid rgba(255,255,255,0.06);
+    }
+    .card-decor2 {
+      position: absolute;
+      bottom: -40px; left: -40px;
+      width: 150px; height: 150px;
+      border-radius: 75px;
+      border: 40px solid rgba(255,255,255,0.04);
+    }
+    .card-decor3 {
+      position: absolute;
+      top: 50%; right: 20px;
+      width: 80px; height: 80px;
+      border-radius: 40px;
+      background: rgba(255,255,255,0.04);
+    }
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .card-type {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      color: rgba(255,255,255,0.55);
+    }
+    .balance-section { margin-top: 20px; }
+    .balance-label { font-size: 13px; color: rgba(255,255,255,0.55); margin-bottom: 4px; }
+    .balance-value { font-size: 32px; font-weight: 800; letter-spacing: -1px; }
+    .card-bottom {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 16px;
+    }
+    .card-number { font-size: 14px; font-weight: 500; letter-spacing: 2px; color: rgba(255,255,255,0.55); }
+    .card-icons { display: flex; gap: 12px; }
+    .card-icons svg { opacity: 0.55; }
+
+    /* Quick Actions */
+    .quick-actions {
+      display: flex;
+      justify-content: space-between;
+      padding: 28px 24px 0;
+      animation: fadeInUp 0.5s ease 3.8s both;
+    }
+    .quick-action {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .quick-action:hover { transform: translateY(-2px); }
+    .quick-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 18px;
+      background: #F5F5F5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid #E8E8E8;
+      transition: all 0.2s;
+    }
+    .quick-action:hover .quick-icon {
+      background: #000;
+    }
+    .quick-action:hover .quick-icon svg { color: #fff; }
+    .quick-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #000;
+    }
+
+    /* Features */
+    .features-section {
+      padding: 32px 24px 0;
+      animation: fadeInUp 0.5s ease 4s both;
+    }
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .section-title { font-size: 18px; font-weight: 700; color: #000; }
+    .section-link { font-size: 13px; font-weight: 600; color: #666; cursor: pointer; }
+    .section-link:hover { color: #000; }
+    .features-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .feature-item {
+      background: #F8F8F8;
+      border-radius: 18px;
+      padding: 16px;
+      border: 1px solid #EEE;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .feature-item:hover {
+      background: #F0F0F0;
+      transform: translateY(-2px);
+    }
+    .feature-icon-bg {
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+      background: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 10px;
+      border: 1px solid #E8E8E8;
+    }
+    .feature-label { font-size: 14px; font-weight: 700; color: #000; margin-bottom: 2px; }
+    .feature-desc { font-size: 12px; color: #888; }
+
+    /* Transactions */
+    .transactions-section {
+      padding: 32px 24px 100px;
+      animation: fadeInUp 0.5s ease 4.2s both;
+    }
+    .tx-item {
+      display: flex;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid #F0F0F0;
+      animation: slideInLeft 0.4s ease both;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .tx-item:hover { opacity: 0.7; }
+    .tx-item:nth-child(1) { animation-delay: 4.3s; }
+    .tx-item:nth-child(2) { animation-delay: 4.4s; }
+    .tx-item:nth-child(3) { animation-delay: 4.5s; }
+    .tx-item:nth-child(4) { animation-delay: 4.6s; }
+    .tx-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .tx-icon.income { background: #F0F0F0; }
+    .tx-icon.expense { background: #F8F8F8; }
+    .tx-info { flex: 1; margin-left: 12px; }
+    .tx-name { font-size: 14px; font-weight: 600; color: #000; margin-bottom: 2px; }
+    .tx-cat { font-size: 12px; color: #888; }
+    .tx-amount { text-align: right; }
+    .tx-value { font-size: 14px; font-weight: 700; }
+    .tx-value.income { color: #000; }
+    .tx-value.expense { color: #666; }
+    .tx-time { font-size: 11px; color: #AAA; margin-top: 2px; }
+
+    .see-all {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 16px;
+      padding: 12px;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .see-all:hover { opacity: 0.7; }
+    .see-all-text { font-size: 14px; font-weight: 600; color: #000; }
+
+    /* Bottom Nav */
+    .bottom-nav {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #fff;
+      border-top: 1px solid #F0F0F0;
+      padding: 8px 0 12px;
+      display: flex;
+      justify-content: space-around;
+      z-index: 50;
+      animation: fadeIn 0.5s ease 4.5s both;
+    }
+    .nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: 6px 0;
+      flex: 1;
+      cursor: pointer;
+      position: relative;
+      transition: opacity 0.2s;
+    }
+    .nav-item:hover { opacity: 0.7; }
+    .nav-indicator {
+      position: absolute;
+      top: 0;
+      width: 24px;
+      height: 3px;
+      border-radius: 2px;
+      background: #000;
+    }
+    .nav-icon {
+      width: 44px;
+      height: 32px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .nav-icon.active { background: #F5F5F5; }
+    .nav-label { font-size: 10px; font-weight: 500; color: #999; }
+    .nav-label.active { font-weight: 700; color: #000; }
+
+    /* SVG Icons */
+    .icon { width: 22px; height: 22px; }
+    .icon-sm { width: 18px; height: 18px; }
+    .icon-lg { width: 24px; height: 24px; }
+  </style>
+</head>
+<body>
+  <div class="phone-frame">
+    <!-- Splash Screen -->
+    <div class="splash" id="splash">
+      <svg class="splash-logo" width="120" height="120" viewBox="0 0 100 100">
+        <path d="M50 10 C50 10, 65 25, 65 35 C65 45, 50 45, 35 55 C20 65, 15 75, 15 75 C15 75, 30 90, 30 90 C30 90, 35 75, 50 65 C65 55, 65 55, 65 45 C65 35, 50 10, 50 10 Z" fill="#000"/>
+        <path d="M50 90 C50 90, 35 75, 35 65 C35 55, 50 55, 65 45 C80 35, 85 25, 85 25 C85 25, 70 10, 70 10 C70 10, 65 25, 50 35 C35 45, 35 45, 35 55 C35 65, 50 90, 50 90 Z" fill="#000" opacity="0.75"/>
+      </svg>
+      <div class="splash-title">VantoPay</div>
+      <div class="splash-sub">Seu dinheiro, seu ritmo</div>
+      <div class="splash-progress">
+        <div class="splash-progress-bar"></div>
+      </div>
+    </div>
+
+    <!-- Main App -->
+    <div class="phone-screen" id="app">
+      <!-- Header -->
+      <div class="header">
+        <div class="header-left">
+          <div class="avatar">VP</div>
+          <div>
+            <div class="greeting">Olá, Bem-vindo</div>
+            <div class="user-name">VantoPay</div>
+          </div>
+        </div>
+        <div class="notif-btn">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
+            <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
+          </svg>
+          <div class="notif-badge"></div>
+        </div>
+      </div>
+
+      <!-- Balance Card -->
+      <div class="card-section">
+        <div class="balance-card" onclick="toggleBalance()">
+          <div class="card-decor1"></div>
+          <div class="card-decor2"></div>
+          <div class="card-decor3"></div>
+          <div class="card-top">
+            <div class="card-header">
+              <svg width="28" height="28" viewBox="0 0 100 100">
+                <path d="M50 10 C50 10, 65 25, 65 35 C65 45, 50 45, 35 55 C20 65, 15 75, 15 75 C15 75, 30 90, 30 90 C30 90, 35 75, 50 65 C65 55, 65 55, 65 45 C65 35, 50 10, 50 10 Z" fill="#fff"/>
+                <path d="M50 90 C50 90, 35 75, 35 65 C35 55, 50 55, 65 45 C80 35, 85 25, 85 25 C85 25, 70 10, 70 10 C70 10, 65 25, 50 35 C35 45, 35 45, 35 55 C35 65, 50 90, 50 90 Z" fill="#fff" opacity="0.75"/>
+              </svg>
+              <span class="card-type">VIRTUAL • VANTO</span>
+            </div>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="1.5" stroke-linecap="round">
+              <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+          </div>
+          <div class="balance-section">
+            <div class="balance-label">Saldo disponível</div>
+            <div class="balance-value" id="balanceValue">R$ 12.847,30</div>
+          </div>
+          <div class="card-bottom">
+            <span class="card-number">•••• •••• •••• 4289</span>
+            <div class="card-icons">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="1.5">
+                <rect width="20" height="14" x="2" y="5" rx="2"/>
+                <line x1="2" x2="22" y1="10" y2="10"/>
+              </svg>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="1.5">
+                <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/>
+                <path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/>
+                <path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="quick-actions">
+        <div class="quick-action">
+          <div class="quick-icon">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <rect width="5" height="5" x="3" y="3" rx="1"/>
+              <rect width="5" height="5" x="16" y="3" rx="1"/>
+              <rect width="5" height="5" x="3" y="16" rx="1"/>
+              <path d="M21 16h-3a2 2 0 0 0-2 2v3"/>
+              <path d="M21 21v.01"/>
+              <path d="M12 7v3a2 2 0 0 1-2 2H7"/>
+              <path d="M3 12h.01"/>
+              <path d="M12 3h.01"/>
+              <path d="M12 16v.01"/>
+              <path d="M16 12h.01"/>
+              <path d="M21 12v.01"/>
+              <path d="M12 21v-1"/>
+            </svg>
+          </div>
+          <span class="quick-label">PIX</span>
+        </div>
+        <div class="quick-action">
+          <div class="quick-icon">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M7 17 17 7"/>
+              <path d="M7 7h10v10"/>
+            </svg>
+          </div>
+          <span class="quick-label">Transferir</span>
+        </div>
+        <div class="quick-action">
+          <div class="quick-icon">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 7 7 17"/>
+              <path d="M17 17H7V7"/>
+            </svg>
+          </div>
+          <span class="quick-label">Receber</span>
+        </div>
+        <div class="quick-action">
+          <div class="quick-icon">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M5 12h14"/>
+              <path d="M12 5v14"/>
+            </svg>
+          </div>
+          <span class="quick-label">Recarga</span>
+        </div>
+      </div>
+
+      <!-- Features -->
+      <div class="features-section">
+        <div class="section-header">
+          <span class="section-title">Serviços</span>
+          <span class="section-link">Ver todos</span>
+        </div>
+        <div class="features-grid">
+          <div class="feature-item">
+            <div class="feature-icon-bg">
+              <svg class="icon-lg" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M19 5c-1.5 0-2.8 1.4-3 2-3.5-1.5-11-.3-11 5 0 1.8 0 3 2 4.5V20h4v-2h3v2h4v-4c1-.5 1.7-1 2-2h2v-4h-2c0-1-.5-1.5-1-2"/>
+                <path d="M2 9.1C4 9.1 5 7.6 5 5"/>
+              </svg>
+            </div>
+            <div class="feature-label">Reservar</div>
+            <div class="feature-desc">Economize</div>
+          </div>
+          <div class="feature-item">
+            <div class="feature-icon-bg">
+              <svg class="icon-lg" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/>
+                <polyline points="16 7 22 7 22 13"/>
+              </svg>
+            </div>
+            <div class="feature-label">Investir</div>
+            <div class="feature-desc">Rendimento</div>
+          </div>
+          <div class="feature-item">
+            <div class="feature-icon-bg">
+              <svg class="icon-lg" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/>
+              </svg>
+            </div>
+            <div class="feature-label">PIX</div>
+            <div class="feature-desc">Instantâneo</div>
+          </div>
+          <div class="feature-item">
+            <div class="feature-icon-bg">
+              <svg class="icon-lg" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              </svg>
+            </div>
+            <div class="feature-label">Seguro</div>
+            <div class="feature-desc">Proteção</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Transactions -->
+      <div class="transactions-section">
+        <div class="section-header">
+          <span class="section-title">Transações</span>
+          <span class="section-link">Ver todas</span>
+        </div>
+        
+        <div class="tx-item">
+          <div class="tx-icon expense">
+            <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 18V5l12-2v13"/>
+              <circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+            </svg>
+          </div>
+          <div class="tx-info">
+            <div class="tx-name">Spotify Premium</div>
+            <div class="tx-cat">Entretenimento</div>
+          </div>
+          <div class="tx-amount">
+            <div class="tx-value expense">- R$ 21,90</div>
+            <div class="tx-time">14:32</div>
+          </div>
+        </div>
+
+        <div class="tx-item">
+          <div class="tx-icon income">
+            <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <rect width="20" height="14" x="2" y="7" rx="2" ry="2"/>
+              <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+            </svg>
+          </div>
+          <div class="tx-info">
+            <div class="tx-name">Salário</div>
+            <div class="tx-cat">Receita</div>
+          </div>
+          <div class="tx-amount">
+            <div class="tx-value income">+ R$ 8.500,00</div>
+            <div class="tx-time">09:00</div>
+          </div>
+        </div>
+
+        <div class="tx-item">
+          <div class="tx-icon expense">
+            <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/>
+              <path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/>
+            </svg>
+          </div>
+          <div class="tx-info">
+            <div class="tx-name">iFood</div>
+            <div class="tx-cat">Alimentação</div>
+          </div>
+          <div class="tx-amount">
+            <div class="tx-value expense">- R$ 45,80</div>
+            <div class="tx-time">Ontem</div>
+          </div>
+        </div>
+
+        <div class="tx-item">
+          <div class="tx-icon expense">
+            <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m22 8-6 4 6 4V8Z"/>
+              <rect width="14" height="12" x="2" y="6" rx="2" ry="2"/>
+            </svg>
+          </div>
+          <div class="tx-info">
+            <div class="tx-name">Netflix</div>
+            <div class="tx-cat">Entretenimento</div>
+          </div>
+          <div class="tx-amount">
+            <div class="tx-value expense">- R$ 39,90</div>
+            <div class="tx-time">Ontem</div>
+          </div>
+        </div>
+
+        <div class="see-all">
+          <span class="see-all-text">Ver todas as transações</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m9 18 6-6-6-6"/>
+          </svg>
+        </div>
+      </div>
+
+      <!-- Bottom Nav -->
+      <div class="bottom-nav">
+        <div class="nav-item" style="cursor: pointer;">
+          <div class="nav-indicator"></div>
+          <div class="nav-icon active">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+              <polyline points="9 22 9 12 15 12 15 22"/>
+            </svg>
+          </div>
+          <span class="nav-label active">Início</span>
+        </div>
+        <div class="nav-item">
+          <div class="nav-icon">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <rect width="20" height="14" x="2" y="5" rx="2"/>
+              <line x1="2" x2="22" y1="10" y2="10"/>
+            </svg>
+          </div>
+          <span class="nav-label">Cartões</span>
+        </div>
+        <div class="nav-item">
+          <div class="nav-icon">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 2.1l4 4-4 4"/><path d="M3 12.2v-2a4 4 0 0 1 4-4h13.8M7 21.9l-4-4 4-4"/><path d="M21 11.8v2a4 4 0 0 1-4 4H3.2"/>
+            </svg>
+          </div>
+          <span class="nav-label">Transações</span>
+        </div>
+        <div class="nav-item">
+          <div class="nav-icon">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+            </svg>
+          </div>
+          <span class="nav-label">Perfil</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let balanceVisible = true;
+    function toggleBalance() {
+      balanceVisible = !balanceVisible;
+      document.getElementById('balanceValue').textContent = balanceVisible ? 'R$ 12.847,30' : 'R$ •••••••';
+    }
+  </script>
+</body>
+</html>
