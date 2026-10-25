@@ -1,0 +1,41 @@
+{
+  "expo": {
+    "name": "VantoPay",
+    "slug": "vantopay",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": false,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FFFFFF"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.veexdevs.vantopay"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single",
+      "favicon": "./assets/icon.png"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#FFFFFF"
+      },
+      "package": "com.veexdevs.vantopay"
+    },
+    "plugins": [
+      "expo-router"
+    ],
+    "scheme": "vantopay",
+    "extra": {
+      "router": {
+        "origin": false
+      }
+    }
+  }
+}
