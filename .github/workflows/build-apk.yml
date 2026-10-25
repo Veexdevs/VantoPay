@@ -7,6 +7,9 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build-apk:
     name: Build Android APK
@@ -52,7 +55,6 @@ jobs:
         run: |
           mkdir -p /tmp/apk-output
           find . -name "*.apk" -type f -exec cp {} /tmp/apk-output/ \;
-          echo "=== APKs ==="
           ls -la /tmp/apk-output/
 
       - name: Upload APK as artifact
@@ -64,8 +66,21 @@ jobs:
           retention-days: 30
           if-no-files-found: error
 
-      - name: Upload APK to Release (main branch)
-        if: github.ref == 'refs/heads/main'
+      - name: Commit APK to repo
+        if: always()
+        run: |
+          git config --global user.email "github-actions@github.com"
+          git config --global user.name "GitHub Actions"
+          mkdir -p releases
+          cp /tmp/apk-output/*.apk releases/ 2>/dev/null || true
+          if ls releases/*.apk 1>/dev/null 2>&1; then
+            git add releases/
+            git commit -m "release: APK build #${{ github.run_number }}" || echo "nothing to commit"
+            git push origin HEAD:${{ github.ref_name }}
+          fi
+
+      - name: Create Release
+        if: always()
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ github.run_number }}
@@ -73,17 +88,5 @@ jobs:
           files: /tmp/apk-output/*.apk
           generate_release_notes: true
           draft: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload APK to Release (arena branches)
-        if: github.ref != 'refs/heads/main'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: dev-${{ github.run_number }}
-          name: VantoPay DEV v${{ github.run_number }}
-          files: /tmp/apk-output/*.apk
-          generate_release_notes: true
-          draft: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
