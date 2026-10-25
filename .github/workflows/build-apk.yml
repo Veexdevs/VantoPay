@@ -36,82 +36,54 @@ jobs:
           NODE_OPTIONS: '--max-old-space-size=4096'
 
       - name: Prebuild Android
-        id: prebuild
-        run: |
-          echo "=== Running expo prebuild ==="
-          npx expo prebuild --platform android --clean 2>&1 | tee /tmp/prebuild.log
-          PREBUILD_EXIT=${PIPESTATUS[0]}
-          echo "prebuild_exit=$PREBUILD_EXIT" >> "$GITHUB_OUTPUT"
-          echo "=== Prebuild exit: $PREBUILD_EXIT ==="
-          echo "=== Android directory contents ==="
-          ls -la android/ 2>/dev/null || echo "NO android directory!"
-          ls -la android/app/ 2>/dev/null || echo "NO android/app directory!"
-          ls -la android/app/build.gradle 2>/dev/null || echo "NO build.gradle!"
+        run: npx expo prebuild --platform android --clean
         env:
           CI: 'true'
 
-      - name: Gradle Build
-        id: gradle
+      - name: Build Debug APK
         run: |
-          if [ ! -d "android" ]; then
-            echo "ERROR: android directory does not exist!"
-            exit 1
-          fi
           cd android
-          if [ ! -f "./gradlew" ]; then
-            echo "ERROR: gradlew not found!"
-            ls -la
-            exit 1
-          fi
           chmod +x ./gradlew
-          echo "=== Starting Gradle build ==="
-          echo "=== Java version ==="
-          java -version 2>&1
-          echo "=== ANDROID_HOME ==="
-          echo $ANDROID_HOME
-          echo "=== SDK dir ==="
-          ls $ANDROID_HOME 2>/dev/null || echo "no ANDROID_HOME dir"
-          echo "=== Running assembleDebug ==="
-          ./gradlew assembleDebug --no-daemon --stacktrace 2>&1 | tee /tmp/gradle.log
-          GRADLE_EXIT=${PIPESTATUS[0]}
-          echo "gradle_exit=$GRADLE_EXIT" >> "$GITHUB_OUTPUT"
-          echo "=== Gradle exit: $GRADLE_EXIT ==="
-          if [ $GRADLE_EXIT -ne 0 ]; then
-            echo "=== LAST 100 LINES OF GRADLE LOG ==="
-            tail -100 /tmp/gradle.log
-          fi
+          ./gradlew assembleDebug --no-daemon --stacktrace
         env:
           CI: 'true'
 
-      - name: Collect APKs
-        id: collect
+      - name: Find APK
         run: |
           mkdir -p /tmp/apk-output
-          echo "=== Searching all APKs in entire filesystem ==="
-          find . -name "*.apk" -type f 2>/dev/null | while read apk; do
-            echo "Found: $apk"
-            cp "$apk" /tmp/apk-output/
-          done
-          echo "=== APK output dir ==="
-          ls -la /tmp/apk-output/ 2>/dev/null || echo "NO APKs found!"
-          APK_COUNT=$(find /tmp/apk-output -name "*.apk" | wc -l)
-          echo "apk_count=$APK_COUNT" >> "$GITHUB_OUTPUT"
+          find . -name "*.apk" -type f -exec cp {} /tmp/apk-output/ \;
+          echo "=== APKs ==="
+          ls -la /tmp/apk-output/
 
-      - name: Upload Build Logs
+      - name: Upload APK as artifact
         if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-logs
-          path: |
-            /tmp/prebuild.log
-            /tmp/gradle.log
-          retention-days: 7
-          if-no-files-found: warn
-
-      - name: Upload APK
-        if: steps.collect.outputs.apk_count > 0
         uses: actions/upload-artifact@v4
         with:
           name: VantoPay-APK
           path: /tmp/apk-output/*.apk
           retention-days: 30
+          if-no-files-found: error
+
+      - name: Upload APK to Release (main branch)
+        if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.run_number }}
+          name: VantoPay v${{ github.run_number }}
+          files: /tmp/apk-output/*.apk
+          generate_release_notes: true
+          draft: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload APK to Release (arena branches)
+        if: github.ref != 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: dev-${{ github.run_number }}
+          name: VantoPay DEV v${{ github.run_number }}
+          files: /tmp/apk-output/*.apk
+          generate_release_notes: true
+          draft: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
