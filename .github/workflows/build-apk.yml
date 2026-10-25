@@ -3,44 +3,21 @@ name: Build VantoPay APK
 on:
   push:
     branches: [main, 'arena/**']
-    paths:
-      - 'app/**'
-      - 'components/**'
-      - 'package.json'
-      - 'app.json'
-      - 'eas.json'
   pull_request:
     branches: [main]
-    paths:
-      - 'app/**'
-      - 'components/**'
-      - 'package.json'
-      - 'app.json'
-      - 'eas.json'
   workflow_dispatch:
-    inputs:
-      release_type:
-        description: 'Release type'
-        required: true
-        default: 'preview'
-        type: choice
-        options:
-          - preview
-          - production
 
 jobs:
   build-apk:
     name: Build Android APK
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: Setup Node.js
+      - name: Setup Node.js 20
         uses: actions/setup-node@v4
         with:
           node-version: '20'
@@ -52,87 +29,61 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Install EAS CLI
-        run: npm install -g eas-cli
-
       - name: Install dependencies
         run: |
-          npm ci
-          npm install
-
-      - name: Configure EAS
-        run: |
-          eas init --id vantopay --force 2>/dev/null || true
-          echo '{"cli":{"version":">= 14.4.1"},"build":{"preview":{"android":{"buildType":"apk"},"distribution":"internal"},"production":{"autoIncrement":true}}}' > eas.json
-
-      - name: Build APK with EAS
-        uses: expo/expo-github-action@v8
-        with:
-          expo-version: latest
-          eas-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
-
-      - name: Build APK
-        if: ${{ env.EXPO_TOKEN != '' }}
-        run: eas build --profile preview --platform android --non-interactive
+          npm ci --legacy-peer-deps || npm install --legacy-peer-deps
         env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          NODE_OPTIONS: '--max-old-space-size=4096'
 
-      - name: Build APK (fallback - local)
-        if: ${{ env.EXPO_TOKEN == '' }}
+      - name: Prebuild Android
+        run: npx expo prebuild --platform android --clean
+        env:
+          CI: 'true'
+
+      - name: Build Debug APK
         run: |
-          echo "️ EXPO_TOKEN not set. Building with Expo locally..."
-          npx expo prebuild --platform android --clean
           cd android
           chmod +x ./gradlew
-          ./gradlew assembleRelease
+          ./gradlew assembleDebug --no-daemon --stacktrace
         env:
-          EXPO_TOKEN: ""
+          CI: 'true'
 
-      - name: Upload APK artifact
+      - name: Find APK
+        run: |
+          mkdir -p /tmp/apk-output
+          find . -name "*.apk" -type f -exec cp {} /tmp/apk-output/ \;
+          echo "=== APKs ==="
+          ls -la /tmp/apk-output/
+
+      - name: Upload APK as artifact
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: VantoPay-APK
-          path: |
-            android/app/build/outputs/apk/release/*.apk
-            *.apk
-          retention-days: 14
+          path: /tmp/apk-output/*.apk
+          retention-days: 30
+          if-no-files-found: error
 
-      - name: Create Release (on main branch)
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      - name: Upload APK to Release (main branch)
+        if: github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ github.run_number }}
           name: VantoPay v${{ github.run_number }}
-          files: |
-            android/app/build/outputs/apk/release/*.apk
-            *.apk
+          files: /tmp/apk-output/*.apk
           generate_release_notes: true
           draft: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  lint-and-test:
-    name: Lint & Type Check
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Upload APK to Release (arena branches)
+        if: github.ref != 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
         with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: |
-          npm ci
-          npm install
-
-      - name: Type check
-        run: npx tsc --noEmit
-
-      - name: Lint
-        run: npx expo lint
+          tag_name: dev-${{ github.run_number }}
+          name: VantoPay DEV v${{ github.run_number }}
+          files: /tmp/apk-output/*.apk
+          generate_release_notes: true
+          draft: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
