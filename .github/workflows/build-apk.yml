@@ -72,6 +72,11 @@ jobs:
         run: |
           git config --global user.email "github-actions@github.com"
           git config --global user.name "GitHub Actions"
+          git config http.postBuffer 524288000
+          # Only commit the zip (APK is too large for git)
+          cd releases
+          rm -f VantoPay.apk
+          cd ..
           git add releases/
           git diff --cached --quiet || {
             git commit -m "release: APK v${{ github.run_number }} [skip ci]"
