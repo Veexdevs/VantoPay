@@ -29,32 +29,41 @@ jobs:
         run: |
           cd flutter_app
           flutter pub get
-          flutter doctor
 
       - name: Build APK
         run: |
           cd flutter_app
-          flutter build apk --release --no-tree-shake-icons 2>&1 | tee /tmp/build.log || {
-            echo "=== BUILD FAILED ==="
-            tail -100 /tmp/build.log
-            exit 1
-          }
+          flutter build apk --release --no-tree-shake-icons
+          echo "=== Build complete ==="
+          find . -name "*.apk" -type f 2>/dev/null
+
+      - name: List build outputs
+        run: |
+          echo "=== APK files found ==="
+          find flutter_app/build -name "*.apk" 2>/dev/null || echo "No APK in flutter_app/build"
+          ls -lh flutter_app/build/app/outputs/flutter-apk/ 2>/dev/null || echo "No flutter-apk dir"
+
+      - name: Upload APK
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: VantoPay-APK
+          path: |
+            flutter_app/build/app/outputs/flutter-apk/*.apk
+            flutter_app/build/**/*.apk
+          if-no-files-found: warn
+          retention-days: 30
 
       - name: Create GitHub Release
+        if: always()
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ github.run_number }}
           name: VantoPay v${{ github.run_number }}
-          files: flutter_app/build/app/outputs/flutter-apk/app-release.apk
+          files: |
+            flutter_app/build/app/outputs/flutter-apk/*.apk
+            flutter_app/build/**/*.apk
           generate_release_notes: true
           draft: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: VantoPay-APK
-          path: flutter_app/build/app/outputs/flutter-apk/app-release.apk
-          retention-days: 30
-          if-no-files-found: warn
