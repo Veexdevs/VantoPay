@@ -25,57 +25,38 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Create Flutter project with Android native files
+      - name: Create Flutter project
         run: |
           cd /tmp
           flutter create vantopay_full --project-name vantopay --org com.veexdevs --platforms android
-          echo "=== Project created ==="
-          ls -la vantopay_full/
 
-      - name: Copy app code into Flutter project
+      - name: Overlay custom code
         run: |
-          # Remove default lib and assets
           rm -rf /tmp/vantopay_full/lib
-          rm -rf /tmp/vantopay_full/assets
-          
-          # Copy our code
           cp -r flutter_app/lib /tmp/vantopay_full/lib
-          cp -r flutter_app/assets /tmp/vantopay_full/assets
           cp flutter_app/pubspec.yaml /tmp/vantopay_full/pubspec.yaml
-          
-          echo "=== Files copied ==="
-          cat /tmp/vantopay_full/pubspec.yaml
-          echo "=== lib contents ==="
-          ls -la /tmp/vantopay_full/lib/
-          echo "=== assets contents ==="
-          ls -la /tmp/vantopay_full/assets/
 
-      - name: Install dependencies
+      - name: Flutter pub get
         run: |
           cd /tmp/vantopay_full
-          flutter pub get 2>&1
-          flutter analyze 2>&1 || true
-          flutter doctor -v
+          flutter pub get
 
-      - name: Build APK
+      - name: Build APK (with verbose output)
         run: |
           cd /tmp/vantopay_full
-          echo "=== Starting build ==="
-          flutter build apk --release --no-tree-shake-icons 2>&1 || {
-            echo "=== BUILD FAILED ==="
-            echo "=== Checking build directory ==="
-            find build/ -type f 2>/dev/null || echo "No build directory"
-            echo "=== Trying debug build ==="
-            flutter build apk --debug 2>&1 || echo "Debug build also failed"
-            exit 1
-          }
-          echo "=== Build complete ==="
-          find build/app/outputs/ -type f -name "*.apk" || echo "No APK found"
-          ls -lh build/app/outputs/flutter-apk/ 2>/dev/null || echo "flutter-apk dir not found"
-          ls -lh build/app/outputs/apk/ 2>/dev/null || echo "apk dir not found"
-          find build/ -name "*.apk" 2>/dev/null
+          flutter build apk --release --no-tree-shake-icons -v 2>&1 | tee build_output.log
+          echo "EXIT CODE: $?"
 
-      - name: Create GitHub Release
+      - name: Find APK
+        if: always()
+        run: |
+          echo "=== Looking for APK files ==="
+          find /tmp/vantopay_full/build -name "*.apk" 2>/dev/null || echo "No APK found in build/"
+          find /tmp/vantopay_full -name "*.apk" 2>/dev/null || echo "No APK found anywhere"
+          echo "=== Build directory structure ==="
+          find /tmp/vantopay_full/build -type f 2>/dev/null | head -50 || echo "No build directory"
+
+      - name: Upload APK to Release
         if: success()
         uses: softprops/action-gh-release@v2
         with:
@@ -83,14 +64,5 @@ jobs:
           name: VantoPay v${{ github.run_number }}
           files: /tmp/vantopay_full/build/app/outputs/flutter-apk/app-release.apk
           generate_release_notes: true
-          draft: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload APK artifact
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: VantoPay-APK
-          path: /tmp/vantopay_full/build/app/outputs/flutter-apk/app-release.apk
-          retention-days: 30
