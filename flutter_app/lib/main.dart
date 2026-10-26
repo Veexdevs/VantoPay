@@ -8,9 +8,6 @@ void main() => runApp(const VantoPayApp());
 class VantoPayApp extends StatefulWidget {
   const VantoPayApp({super.key});
 
-  static _VantoPayAppState of(BuildContext context) =>
-      context.findAncestorStateOfType<_VantoPayAppState>()!;
-
   @override
   State<VantoPayApp> createState() => _VantoPayAppState();
 }
@@ -39,14 +36,6 @@ class _VantoPayAppState extends State<VantoPayApp> {
       surface: Color(0xFF1C1C1E),
       onSurface: Colors.white,
     ),
-    cardTheme: const CardThemeData(
-      color: Color(0xFF1C1C1E),
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.all(Radius.circular(20)),
-        side: BorderSide(color: Color(0xFF2C2C2E), width: 1),
-      ),
-    ),
     useMaterial3: true,
   );
 
@@ -59,28 +48,20 @@ class _VantoPayAppState extends State<VantoPayApp> {
       surface: Colors.white,
       onSurface: Color(0xFF1C1C1E),
     ),
-    cardTheme: const CardThemeData(
-      color: Colors.white,
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.all(Radius.circular(20)),
-        side: BorderSide(color: Color(0xFFE5E5EA), width: 1),
-      ),
-    ),
     useMaterial3: true,
   );
 }
 
 // ─── Elastic curve (Apple-style) ────────────────────────────────────────────
 
-class _ElasticOutCurve extends Curve {
-  const _ElasticOutCurve();
+class ElasticOutCurve extends Curve {
+  const ElasticOutCurve();
   @override
   double transform(double t) {
     if (t == 0.0 || t == 1.0) return t;
-    return math.pow(2.0, -10 * t) *
-            math.sin((t - 0.075) * (2 * math.pi) / 0.3) +
-        1;
+    return (math.pow(2.0, -10 * t).toDouble() *
+            math.sin((t - 0.075) * (2 * math.pi) / 0.3)) +
+        1.0;
   }
 }
 
@@ -104,7 +85,7 @@ class _VantoPaySplashState extends State<VantoPaySplash>
     super.initState();
     _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 1800));
     _scale = Tween<double>(begin: 0.5, end: 1.0).animate(
-      CurvedAnimation(parent: _ctrl, curve: const _ElasticOutCurve()),
+      CurvedAnimation(parent: _ctrl, curve: const ElasticOutCurve()),
     );
     _fade = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _ctrl, curve: const Interval(0.0, 0.5, curve: Curves.easeOut)),
@@ -137,31 +118,26 @@ class _VantoPaySplashState extends State<VantoPaySplash>
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF0A0A0A) : const Color(0xFFF2F2F7),
       body: Center(
-        child: AnimatedBuilder(
-          animation: _ctrl,
-          builder: (context, _) {
-            return FadeTransition(
-              opacity: _fade,
-              child: ScaleTransition(
-                scale: _scale,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Image.asset('assets/logo.png', width: 100, height: 100,
-                        errorBuilder: (_, __, ___) => const Icon(Icons.account_balance_wallet, size: 80, color: Color(0xFF8B5CF6))),
-                    const SizedBox(height: 20),
-                    Text('VantoPay',
-                        style: TextStyle(fontSize: 36, fontWeight: FontWeight.w800,
-                            color: isDark ? Colors.white : const Color(0xFF1C1C1E))),
-                    const SizedBox(height: 8),
-                    Text('SEU DINHEIRO, SEU RITMO',
-                        style: TextStyle(fontSize: 14, letterSpacing: 3,
-                            color: isDark ? Colors.white.withOpacity(0.5) : const Color(0xFF1C1C1E).withOpacity(0.5))),
-                  ],
-                ),
-              ),
-            );
-          },
+        child: FadeTransition(
+          opacity: _fade,
+          child: ScaleTransition(
+            scale: _scale,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Image.asset('assets/logo.png', width: 100, height: 100,
+                    errorBuilder: (_, __, ___) => const Icon(Icons.account_balance_wallet, size: 80, color: Color(0xFF8B5CF6))),
+                const SizedBox(height: 20),
+                Text('VantoPay',
+                    style: TextStyle(fontSize: 36, fontWeight: FontWeight.w800,
+                        color: isDark ? Colors.white : const Color(0xFF1C1C1E))),
+                const SizedBox(height: 8),
+                Text('SEU DINHEIRO, SEU RITMO',
+                    style: TextStyle(fontSize: 14, letterSpacing: 3,
+                        color: isDark ? Colors.white.withOpacity(0.5) : const Color(0xFF1C1C1E).withOpacity(0.5))),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -180,8 +156,6 @@ class VantoPayHome extends StatefulWidget {
 class _VantoPayHomeState extends State<VantoPayHome>
     with SingleTickerProviderStateMixin {
   late AnimationController _ctrl;
-  late Animation<double> _headerSlide;
-  late Animation<double> _cardSlide;
   late Animation<double> _actionsFade;
   late Animation<double> _listFade;
 
@@ -193,12 +167,6 @@ class _VantoPayHomeState extends State<VantoPayHome>
     super.initState();
     _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200));
 
-    _headerSlide = Tween<double>(begin: -60.0, end: 0.0).animate(
-      CurvedAnimation(parent: _ctrl, curve: const Interval(0.0, 0.3, curve: Curves.easeOut)),
-    );
-    _cardSlide = Tween<double>(begin: 80.0, end: 0.0).animate(
-      CurvedAnimation(parent: _ctrl, curve: const Interval(0.15, 0.5, curve: const _ElasticOutCurve())),
-    );
     _actionsFade = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _ctrl, curve: const Interval(0.4, 0.7, curve: Curves.easeOut)),
     );
@@ -228,292 +196,281 @@ class _VantoPayHomeState extends State<VantoPayHome>
     return Scaffold(
       backgroundColor: bg,
       body: SafeArea(
-        child: AnimatedBuilder(
-          animation: _ctrl,
-          builder: (context, _) {
-            return Column(
-              children: [
-                // ─── Header ───
-                SlideTransition(
-                  position: Tween<Offset>(
-                    begin: const Offset(0, -1),
-                    end: Offset.zero,
-                  ).animate(_headerSlide),
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-                    child: Row(
-                      children: [
-                        // Logo box
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: accent.withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Image.asset('assets/logo.png',
-                              errorBuilder: (_, __, ___) => const Icon(Icons.account_balance_wallet, size: 22, color: Color(0xFF8B5CF6))),
+        child: Column(
+          children: [
+            // ─── Header ───
+            SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0, -1),
+                end: Offset.zero,
+              ).animate(CurvedAnimation(parent: _ctrl, curve: const Interval(0.0, 0.3, curve: Curves.easeOut))),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 40, height: 40,
+                      decoration: BoxDecoration(
+                        color: accent.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Image.asset('assets/logo.png',
+                          errorBuilder: (_, __, ___) => const Icon(Icons.account_balance_wallet, size: 22, color: Color(0xFF8B5CF6))),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Ola,', style: TextStyle(fontSize: 14, color: textSecondary)),
+                          Text('Joao Silva', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: textPrimary)),
+                        ],
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () {},
+                      child: Container(
+                        width: 40, height: 40,
+                        decoration: BoxDecoration(
+                          color: cardBg,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: border),
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                        child: Icon(Icons.notifications_outlined, color: textPrimary, size: 20),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Container(
+                      width: 40, height: 40,
+                      decoration: BoxDecoration(
+                        color: accent,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Center(child: Text('JS', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14))),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // ─── Scrollable content ───
+            Expanded(
+              child: ListView(
+                physics: const ClampingScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                children: [
+                  const SizedBox(height: 20),
+
+                  // ─── Balance card ───
+                  SlideTransition(
+                    position: Tween<Offset>(
+                      begin: const Offset(0, 0.5),
+                      end: Offset.zero,
+                    ).animate(CurvedAnimation(parent: _ctrl, curve: const Interval(0.15, 0.5, curve: ElasticOutCurve()))),
+                    child: Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            accent,
+                            accent.withOpacity(0.7),
+                            const Color(0xFF6D28D9),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: [
+                          BoxShadow(
+                            color: accent.withOpacity(0.3),
+                            blurRadius: 20,
+                            offset: const Offset(0, 10),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
                             children: [
-                              Text('Olá,', style: TextStyle(fontSize: 14, color: textSecondary)),
-                              Text('João Silva', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: textPrimary)),
+                              Icon(Icons.account_balance_wallet, color: Colors.white.withOpacity(0.8), size: 18),
+                              const SizedBox(width: 8),
+                              Text('Saldo disponivel', style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 14)),
+                              const Spacer(),
+                              GestureDetector(
+                                onTap: () => setState(() => _showBalance = !_showBalance),
+                                child: Icon(_showBalance ? Icons.visibility : Icons.visibility_off,
+                                    color: Colors.white.withOpacity(0.8), size: 20),
+                              ),
                             ],
                           ),
-                        ),
-                        // Notification bell
-                        GestureDetector(
-                          onTap: () {},
-                          child: Container(
-                            width: 40, height: 40,
+                          const SizedBox(height: 12),
+                          Text(
+                            _showBalance ? 'R\$ 2.450,80' : 'R\$ ••••••',
+                            style: const TextStyle(fontSize: 36, fontWeight: FontWeight.w800, color: Colors.white),
+                          ),
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
-                              color: cardBg,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: border),
+                              color: Colors.white.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(8),
                             ),
-                            child: Icon(Icons.notifications_outlined, color: textPrimary, size: 20),
+                            child: const Text('+3,2% este mes · ficticio',
+                                style: TextStyle(fontSize: 12, color: Colors.white)),
                           ),
-                        ),
-                        const SizedBox(width: 10),
-                        // Avatar
-                        Container(
-                          width: 40, height: 40,
-                          decoration: BoxDecoration(
-                            color: accent,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Center(child: Text('JS', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14))),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
-                ),
 
-                // ─── Scrollable content ───
-                Expanded(
-                  child: ListView(
-                    physics: const ClampingScrollPhysics(),
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    children: [
-                      const SizedBox(height: 20),
+                  const SizedBox(height: 24),
 
-                      // ─── Balance card ───
-                      SlideTransition(
-                        position: Tween<Offset>(
-                          begin: const Offset(0, 0.5),
-                          end: Offset.zero,
-                        ).animate(CurvedAnimation(parent: _ctrl, curve: const Interval(0.15, 0.5, curve: const _ElasticOutCurve()))),
-                        child: Container(
-                          padding: const EdgeInsets.all(24),
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [
-                                accent,
-                                accent.withOpacity(0.7),
-                                const Color(0xFF6D28D9),
-                              ],
-                            ),
-                            borderRadius: BorderRadius.circular(24),
-                            boxShadow: [
-                              BoxShadow(
-                                color: accent.withOpacity(0.3),
-                                blurRadius: 20,
-                                offset: const Offset(0, 10),
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Icon(Icons.account_balance_wallet, color: Colors.white.withOpacity(0.8), size: 18),
-                                  const SizedBox(width: 8),
-                                  Text('Saldo disponível', style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 14)),
-                                  const Spacer(),
-                                  GestureDetector(
-                                    onTap: () => setState(() => _showBalance = !_showBalance),
-                                    child: Icon(_showBalance ? Icons.visibility : Icons.visibility_off,
-                                        color: Colors.white.withOpacity(0.8), size: 20),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 12),
-                              Text(
-                                _showBalance ? 'R\$ 2.450,80' : 'R\$ ••••••',
-                                style: const TextStyle(fontSize: 36, fontWeight: FontWeight.w800, color: Colors.white),
-                              ),
-                              const SizedBox(height: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.15),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: const Text('+3,2% este mês · fictício',
-                                    style: TextStyle(fontSize: 12, color: Colors.white)),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 24),
-
-                      // ─── Quick actions ───
-                      FadeTransition(
-                        opacity: _actionsFade,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
-                          children: [
-                            _QuickAction(icon: Icons.send_rounded, label: 'Enviar Pix', color: accent),
-                            _QuickAction(icon: Icons.qr_code_2_rounded, label: 'Receber Pix', color: const Color(0xFF10B981)),
-                            _QuickAction(icon: Icons.key_rounded, label: 'Copiar chave', color: const Color(0xFFF59E0B)),
-                            _QuickAction(icon: Icons.receipt_long_rounded, label: 'Pagar', color: const Color(0xFFEF4444)),
-                            _QuickAction(icon: Icons.list_alt_rounded, label: 'Extrato', color: const Color(0xFF3B82F6)),
-                          ],
-                        ),
-                      ),
-
-                      const SizedBox(height: 28),
-
-                      // ─── Activities header ───
-                      FadeTransition(
-                        opacity: _listFade,
-                        child: Row(
-                          children: [
-                            Text('Atividade recente', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: textPrimary)),
-                            const Spacer(),
-                            Text('Ver tudo', style: TextStyle(fontSize: 14, color: accent, fontWeight: FontWeight.w600)),
-                          ],
-                        ),
-                      ),
-
-                      const SizedBox(height: 14),
-
-                      // ─── Activity list ───
-                      FadeTransition(
-                        opacity: _listFade,
-                        child: Column(
-                          children: [
-                            _ActivityItem(
-                              icon: Icons.arrow_upward_rounded,
-                              iconBg: const Color(0xFFEF4444),
-                              title: 'Transferência enviada',
-                              subtitle: 'Para Maria Santos · Pix',
-                              amount: '- R\$ 120,00',
-                              time: 'Hoje, 14:32',
-                              isDark: isDark,
-                            ),
-                            _divider(border),
-                            _ActivityItem(
-                              icon: Icons.arrow_downward_rounded,
-                              iconBg: const Color(0xFF10B981),
-                              title: 'Depósito recebido',
-                              subtitle: 'De Pedro Lima · Pix',
-                              amount: '+ R\$ 450,00',
-                              time: 'Hoje, 11:15',
-                              isDark: isDark,
-                            ),
-                            _divider(border),
-                            _ActivityItem(
-                              icon: Icons.shopping_bag_rounded,
-                              iconBg: const Color(0xFF3B82F6),
-                              title: 'Pagamento',
-                              subtitle: 'iFood · Cartão Virtual',
-                              amount: '- R\$ 48,90',
-                              time: 'Ontem, 20:05',
-                              isDark: isDark,
-                            ),
-                            _divider(border),
-                            _ActivityItem(
-                              icon: Icons.credit_card_rounded,
-                              iconBg: const Color(0xFFF59E0B),
-                              title: 'Recarga',
-                              subtitle: 'Vivo · R\$ 30,00',
-                              amount: '- R\$ 30,00',
-                              time: 'Ontem, 09:42',
-                              isDark: isDark,
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      const SizedBox(height: 8),
-
-                      // ─── Fictício badge ───
-                      Center(
-                        child: Container(
-                          margin: const EdgeInsets.symmetric(vertical: 12),
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: isDark ? const Color(0xFF2C2C2E) : const Color(0xFFE5E5EA),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text('Dados fictícios',
-                              style: TextStyle(fontSize: 11, color: textSecondary)),
-                        ),
-                      ),
-
-                      // ─── Ver extrato button ───
-                      FadeTransition(
-                        opacity: _listFade,
-                        child: Container(
-                          width: double.infinity,
-                          margin: const EdgeInsets.symmetric(vertical: 8),
-                          child: TextButton(
-                            onPressed: () {},
-                            style: TextButton.styleFrom(
-                              backgroundColor: isDark ? const Color(0xFF1C1C1E) : Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                side: BorderSide(color: border),
-                              ),
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                            ),
-                            child: Text('Ver extrato completo',
-                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: accent)),
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 100),
-                    ],
-                  ),
-                ),
-
-                // ─── Bottom nav ───
-                FadeTransition(
-                  opacity: _listFade,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: cardBg,
-                      border: Border(top: BorderSide(color: border)),
-                    ),
-                    padding: EdgeInsets.only(
-                      left: 8, right: 8, top: 8,
-                      bottom: MediaQuery.of(context).padding.bottom + 8,
-                    ),
+                  // ─── Quick actions ───
+                  FadeTransition(
+                    opacity: _actionsFade,
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
-                        _NavTab(icon: Icons.home_rounded, label: 'Início', active: _currentTab == 0, onTap: () => setState(() => _currentTab = 0)),
-                        _NavTab(icon: Icons.credit_card_rounded, label: 'Cartões', active: _currentTab == 1, onTap: () => setState(() => _currentTab = 1)),
-                        _NavTab(icon: Icons.pix_rounded, label: 'Pix', active: _currentTab == 2, onTap: () => setState(() => _currentTab = 2), isAccent: true),
-                        _NavTab(icon: Icons.bar_chart_rounded, label: 'Investir', active: _currentTab == 3, onTap: () => setState(() => _currentTab = 3)),
-                        _NavTab(icon: Icons.person_rounded, label: 'Perfil', active: _currentTab == 4, onTap: () => setState(() => _currentTab = 4)),
+                        _QuickAction(icon: Icons.send_rounded, label: 'Enviar Pix', color: accent),
+                        _QuickAction(icon: Icons.qr_code_rounded, label: 'Receber Pix', color: const Color(0xFF10B981)),
+                        _QuickAction(icon: Icons.key_rounded, label: 'Copiar chave', color: const Color(0xFFF59E0B)),
+                        _QuickAction(icon: Icons.receipt_long_rounded, label: 'Pagar', color: const Color(0xFFEF4444)),
+                        _QuickAction(icon: Icons.list_alt_rounded, label: 'Extrato', color: const Color(0xFF3B82F6)),
                       ],
                     ),
                   ),
+
+                  const SizedBox(height: 28),
+
+                  // ─── Activities header ───
+                  FadeTransition(
+                    opacity: _listFade,
+                    child: Row(
+                      children: [
+                        Text('Atividade recente', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: textPrimary)),
+                        const Spacer(),
+                        Text('Ver tudo', style: TextStyle(fontSize: 14, color: accent, fontWeight: FontWeight.w600)),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 14),
+
+                  // ─── Activity list ───
+                  FadeTransition(
+                    opacity: _listFade,
+                    child: Column(
+                      children: [
+                        _ActivityItem(
+                          icon: Icons.arrow_upward_rounded,
+                          iconBg: const Color(0xFFEF4444),
+                          title: 'Transferencia enviada',
+                          subtitle: 'Para Maria Santos · Pix',
+                          amount: '- R\$ 120,00',
+                          time: 'Hoje, 14:32',
+                          isDark: isDark,
+                        ),
+                        _divider(border),
+                        _ActivityItem(
+                          icon: Icons.arrow_downward_rounded,
+                          iconBg: const Color(0xFF10B981),
+                          title: 'Deposito recebido',
+                          subtitle: 'De Pedro Lima · Pix',
+                          amount: '+ R\$ 450,00',
+                          time: 'Hoje, 11:15',
+                          isDark: isDark,
+                        ),
+                        _divider(border),
+                        _ActivityItem(
+                          icon: Icons.shopping_bag_rounded,
+                          iconBg: const Color(0xFF3B82F6),
+                          title: 'Pagamento',
+                          subtitle: 'iFood · Cartao Virtual',
+                          amount: '- R\$ 48,90',
+                          time: 'Ontem, 20:05',
+                          isDark: isDark,
+                        ),
+                        _divider(border),
+                        _ActivityItem(
+                          icon: Icons.credit_card_rounded,
+                          iconBg: const Color(0xFFF59E0B),
+                          title: 'Recarga',
+                          subtitle: 'Vivo · R\$ 30,00',
+                          amount: '- R\$ 30,00',
+                          time: 'Ontem, 09:42',
+                          isDark: isDark,
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  Center(
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(vertical: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF2C2C2E) : const Color(0xFFE5E5EA),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text('Dados ficticios',
+                          style: TextStyle(fontSize: 11, color: textSecondary)),
+                    ),
+                  ),
+
+                  FadeTransition(
+                    opacity: _listFade,
+                    child: Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.symmetric(vertical: 8),
+                      child: TextButton(
+                        onPressed: () {},
+                        style: TextButton.styleFrom(
+                          backgroundColor: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            side: BorderSide(color: border),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                        ),
+                        child: Text('Ver extrato completo',
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: accent)),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 100),
+                ],
+              ),
+            ),
+
+            // ─── Bottom nav ───
+            FadeTransition(
+              opacity: _listFade,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: cardBg,
+                  border: Border(top: BorderSide(color: border)),
                 ),
-              ],
-            );
-          },
+                padding: EdgeInsets.only(
+                  left: 8, right: 8, top: 8,
+                  bottom: MediaQuery.of(context).padding.bottom + 8,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _NavTab(icon: Icons.home_rounded, label: 'Inicio', active: _currentTab == 0, onTap: () => setState(() => _currentTab = 0)),
+                    _NavTab(icon: Icons.credit_card_rounded, label: 'Cartoes', active: _currentTab == 1, onTap: () => setState(() => _currentTab = 1)),
+                    _NavTab(icon: Icons.swap_horiz_rounded, label: 'Pix', active: _currentTab == 2, onTap: () => setState(() => _currentTab = 2), isAccent: true),
+                    _NavTab(icon: Icons.bar_chart_rounded, label: 'Investir', active: _currentTab == 3, onTap: () => setState(() => _currentTab = 3)),
+                    _NavTab(icon: Icons.person_rounded, label: 'Perfil', active: _currentTab == 4, onTap: () => setState(() => _currentTab = 4)),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
