@@ -25,36 +25,53 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Flutter doctor
+      - name: Create Flutter project structure
         run: |
-          flutter doctor -v
+          # Save our custom lib and assets
+          cp -r flutter_app/lib /tmp/lib_backup
+          cp -r flutter_app/assets /tmp/assets_backup 2>/dev/null || true
+          cp flutter_app/pubspec.yaml /tmp/pubspec_backup.yaml
+          
+          # Create full Flutter project
+          cd /tmp
+          flutter create vantopay_project --project-name vantopay --org com.veexdevs
+          
+          # Copy our code into the project
+          rm -rf /tmp/vantopay_project/lib
+          cp -r /tmp/lib_backup /tmp/vantopay_project/lib
+          cp /tmp/pubspec_backup.yaml /tmp/vantopay_project/pubspec.yaml
+          if [ -d /tmp/assets_backup ]; then
+            cp -r /tmp/assets_backup /tmp/vantopay_project/assets
+          fi
+          
+          # Copy to repo
+          rm -rf flutter_app
+          cp -r /tmp/vantopay_project flutter_app
+
+      - name: Install dependencies
+        run: |
           cd flutter_app
           flutter pub get
 
-      - name: Build APK with verbose
-        id: build
+      - name: Build APK
         run: |
           cd flutter_app
-          flutter build apk --release --verbose 2>&1 | tee /tmp/build.log
-          echo "exit_code=$?" >> $GITHUB_OUTPUT
-        continue-on-error: true
+          flutter build apk --release --no-tree-shake-icons
 
-      - name: Show build log tail
-        if: always()
-        run: |
-          echo "=== LAST 100 LINES OF BUILD LOG ==="
-          tail -100 /tmp/build.log 2>/dev/null || echo "No build log"
-          echo "=== APK files ==="
-          find /home/runner -name "*.apk" 2>/dev/null | head -20 || echo "No APK found"
-          echo "=== Flutter build dir ==="
-          ls -la flutter_app/build/ 2>/dev/null || echo "No build dir"
-
-      - name: Upload APK
-        if: always()
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: VantoPay-APK
-          path: |
-            flutter_app/build/app/outputs/flutter-apk/*.apk
-          if-no-files-found: warn
+          path: flutter_app/build/app/outputs/flutter-apk/app-release.apk
           retention-days: 30
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.run_number }}
+          name: VantoPay v${{ github.run_number }}
+          files: flutter_app/build/app/outputs/flutter-apk/app-release.apk
+          generate_release_notes: true
+          draft: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
