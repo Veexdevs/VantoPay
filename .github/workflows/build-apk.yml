@@ -30,79 +30,43 @@ jobs:
           flutter-version: '3.24.5'
           channel: 'stable'
 
-      - name: Flutter doctor
-        run: flutter doctor -v
-
       - name: Create Flutter project
         run: |
           cd /tmp
           flutter create vantopay_full --project-name vantopay --org com.veexdevs --platforms android
-          echo "=== Project files ==="
-          find vantopay_full/android -name "build.gradle" | head -5
-          cat vantopay_full/android/build.gradle
 
       - name: Overlay custom code
         run: |
           rm -rf /tmp/vantopay_full/lib
+          rm -rf /tmp/vantopay_full/assets
           cp -r flutter_app/lib /tmp/vantopay_full/lib
+          cp -r flutter_app/assets /tmp/vantopay_full/assets
           cp flutter_app/pubspec.yaml /tmp/vantopay_full/pubspec.yaml
-          echo "=== pubspec.yaml ==="
-          cat /tmp/vantopay_full/pubspec.yaml
-          echo "=== main.dart ==="
-          cat /tmp/vantopay_full/lib/main.dart
 
       - name: Flutter pub get
         run: |
           cd /tmp/vantopay_full
-          flutter pub get 2>&1
+          flutter pub get
 
-      - name: Flutter analyze
+      - name: Build APK
         run: |
           cd /tmp/vantopay_full
-          flutter analyze 2>&1 || echo "Analysis had issues but continuing..."
-
-      - name: Build APK release
-        id: build
-        run: |
-          cd /tmp/vantopay_full
-          echo "=== Building release APK ==="
           flutter build apk --release --no-tree-shake-icons 2>&1
-          BUILD_EXIT=$?
-          echo "Build exit code: $BUILD_EXIT"
-          
-          if [ $BUILD_EXIT -ne 0 ]; then
-            echo "=== Release build failed, trying debug ==="
-            flutter build apk --debug 2>&1 || true
-          fi
-          
-          echo "=== All APK files ==="
-          find /tmp/vantopay_full/build -name "*.apk" -type f 2>/dev/null || echo "No APKs found"
-          echo "=== Build dir listing ==="
-          ls -laR /tmp/vantopay_full/build/app/outputs/ 2>/dev/null || echo "No outputs dir"
-          exit $BUILD_EXIT
+          echo "=== APK files ==="
+          find /tmp/vantopay_full/build -name "*.apk" -type f 2>/dev/null
 
       - name: Copy APK to workspace
-        if: success()
         run: |
           APK=$(find /tmp/vantopay_full/build -name "app-release.apk" -type f 2>/dev/null | head -1)
           if [ -z "$APK" ]; then
+            echo "No release APK found, looking for debug..."
             APK=$(find /tmp/vantopay_full/build -name "*.apk" -type f 2>/dev/null | head -1)
           fi
-          echo "APK path: $APK"
+          echo "APK: $APK"
           cp "$APK" ./VantoPay.apk
           ls -lh ./VantoPay.apk
 
-      - name: Upload build logs on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-logs
-          path: |
-            /tmp/vantopay_full/build/
-          retention-days: 3
-
       - name: Create Release with APK
-        if: success()
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ github.run_number }}
