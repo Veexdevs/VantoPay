@@ -12,13 +12,13 @@ permissions:
 
 jobs:
   build-apk:
-    name: Build Android APK
+    name: Gerar VantoPay APK
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Node.js 20
         uses: actions/setup-node@v4
@@ -27,7 +27,7 @@ jobs:
           cache: 'npm'
 
       - name: Setup Java 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v6
         with:
           distribution: 'temurin'
           java-version: '17'
@@ -43,7 +43,7 @@ jobs:
         env:
           CI: 'true'
 
-      - name: Build Debug APK
+      - name: Build APK
         run: |
           cd android
           chmod +x ./gradlew
@@ -51,63 +51,53 @@ jobs:
         env:
           CI: 'true'
 
-      - name: Package APK for git
-        id: package
+      - name: Package APK
         run: |
           mkdir -p releases
           APK=$(find . -name "*.apk" -type f | head -1)
           if [ -z "$APK" ]; then
             echo "ERROR: No APK found!"
+            find . -name "*.apk" 2>/dev/null
             exit 1
           fi
-          APK_SIZE=$(du -m "$APK" | cut -f1)
-          echo "APK size: ${APK_SIZE}MB"
-          cp "$APK" releases/app-debug.apk
-          # Compress
+          echo "APK: $APK ($(du -m $APK | cut -f1)MB)"
+          cp "$APK" releases/VantoPay.apk
           cd releases
-          zip -9 VantoPay.apk.zip app-debug.apk
-          ZIP_SIZE=$(du -m VantoPay.apk.zip | cut -f1)
-          echo "ZIP size: ${ZIP_SIZE}MB"
-          echo "apk_size=$APK_SIZE" >> "$GITHUB_OUTPUT"
-          echo "zip_size=$ZIP_SIZE" >> "$GITHUB_OUTPUT"
+          zip -9 VantoPay.apk.zip VantoPay.apk
           ls -lh
 
-      - name: Commit ZIP to repo
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: VantoPay-APK
+          path: releases/VantoPay.apk
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Upload ZIP to repo (download via codeload)
         run: |
           git config --global user.email "actions@github.com"
           git config --global user.name "GitHub Actions"
           git config http.postBuffer 524288000
           cd releases
-          rm -f app-debug.apk
+          rm -f VantoPay.apk
           cd ..
           git add -f releases/VantoPay.apk.zip
           STATUS=$(git status --short)
-          echo "Git status: $STATUS"
           if [ -n "$STATUS" ]; then
             git commit -m "release: VantoPay APK v${{ github.run_number }} [skip ci]"
             git push origin HEAD:${{ github.ref_name }}
-            echo "Pushed successfully!"
-          else
-            echo "Nothing to commit"
           fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: v${{ github.run_number }}
           name: VantoPay v${{ github.run_number }}
-          files: releases/app-debug.apk
+          files: releases/VantoPay.apk
           generate_release_notes: true
           draft: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: VantoPay-APK
-          path: releases/app-debug.apk
-          retention-days: 30
-          if-no-files-found: warn
