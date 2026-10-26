@@ -12,46 +12,61 @@ jobs:
   build-apk:
     name: Build Android APK
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
         with:
-          node-version: '20'
-          cache: 'npm'
+          flutter-version: '3.24.5'
+          channel: 'stable'
+          cache: true
 
-      - name: Setup Java 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
+      - name: Create Flutter project with Android native files
+        run: |
+          cd /tmp
+          flutter create vantopay_full --project-name vantopay --org com.veexdevs --platforms android
+          echo "Project created"
+          ls -la vantopay_full/
+          ls -la vantopay_full/android/
+
+      - name: Copy app code into Flutter project
+        run: |
+          # Remove default lib and assets
+          rm -rf /tmp/vantopay_full/lib
+          rm -rf /tmp/vantopay_full/assets
+          
+          # Copy our code
+          cp -r flutter_app/lib /tmp/vantopay_full/lib
+          cp -r flutter_app/assets /tmp/vantopay_full/assets
+          cp flutter_app/pubspec.yaml /tmp/vantopay_full/pubspec.yaml
+          
+          echo "=== Files copied ==="
+          ls -la /tmp/vantopay_full/lib/
+          ls -la /tmp/vantopay_full/assets/
 
       - name: Install dependencies
-        run: npm ci --legacy-peer-deps || npm install --legacy-peer-deps
-        env:
-          NODE_OPTIONS: '--max-old-space-size=4096'
-
-      - name: Prebuild Android
-        run: npx expo prebuild --platform android --clean
-        env:
-          CI: 'true'
+        run: |
+          cd /tmp/vantopay_full
+          flutter pub get
+          flutter doctor -v
 
       - name: Build APK
         run: |
-          cd android
-          chmod +x ./gradlew
-          ./gradlew assembleDebug --no-daemon
+          cd /tmp/vantopay_full
+          flutter build apk --release --no-tree-shake-icons
+          echo "=== Build complete ==="
+          ls -lh build/app/outputs/flutter-apk/
 
-      - name: Create Release
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ github.run_number }}
           name: VantoPay v${{ github.run_number }}
-          files: android/app/build/outputs/apk/debug/app-debug.apk
+          files: /tmp/vantopay_full/build/app/outputs/flutter-apk/app-release.apk
           generate_release_notes: true
           draft: false
         env:
@@ -61,6 +76,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: VantoPay-APK
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          path: /tmp/vantopay_full/build/app/outputs/flutter-apk/app-release.apk
           retention-days: 30
-          if-no-files-found: warn

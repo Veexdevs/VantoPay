@@ -1,28 +1,23 @@
-node_modules/
-.expo/
-dist/
-build/
-android/
-ios/
-*.jks
-*.p8
-*.p12
-*.key
-*.mobileprovision
-*.orig.*
-web-build/
-.env
-.env.local
-*.apk
-!releases/*.zip
-*.aab
-*.ipa
-*.zip
-*.tar.gz
+# Flutter
+flutter_app/.dart_tool/
+flutter_app/.flutter-plugins
+flutter_app/.flutter-plugins-dependencies
+flutter_app/.idea/
+flutter_app/.packages
+flutter_app/build/
+flutter_app/.android/
+flutter_app/.ios/
+flutter_app/.macos/
+flutter_app/.windows/
+flutter_app/.linux/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
 .DS_Store
-.expo-shared/
-npm-debug.*
-*.log
-coverage/
-.gradle/
-local.properties
+Thumbs.db
+
+# Misc
+*.iml
