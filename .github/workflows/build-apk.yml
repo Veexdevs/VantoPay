@@ -18,68 +18,96 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.24.5'
           channel: 'stable'
-          cache: true
+
+      - name: Flutter doctor
+        run: flutter doctor -v
 
       - name: Create Flutter project
         run: |
           cd /tmp
           flutter create vantopay_full --project-name vantopay --org com.veexdevs --platforms android
+          echo "=== Project files ==="
+          find vantopay_full/android -name "build.gradle" | head -5
+          cat vantopay_full/android/build.gradle
 
       - name: Overlay custom code
         run: |
           rm -rf /tmp/vantopay_full/lib
           cp -r flutter_app/lib /tmp/vantopay_full/lib
           cp flutter_app/pubspec.yaml /tmp/vantopay_full/pubspec.yaml
+          echo "=== pubspec.yaml ==="
+          cat /tmp/vantopay_full/pubspec.yaml
+          echo "=== main.dart ==="
+          cat /tmp/vantopay_full/lib/main.dart
 
       - name: Flutter pub get
         run: |
           cd /tmp/vantopay_full
-          flutter pub get
+          flutter pub get 2>&1
 
-      - name: Build APK
+      - name: Flutter analyze
         run: |
           cd /tmp/vantopay_full
-          flutter build apk --release --no-tree-shake-icons
+          flutter analyze 2>&1 || echo "Analysis had issues but continuing..."
 
-      - name: Locate and copy APK
+      - name: Build APK release
+        id: build
         run: |
-          echo "=== Searching for APK ==="
-          find /tmp/vantopay_full/build -name "*.apk" -type f
-          echo "=== Copying to workspace ==="
-          # Find the release APK
-          APK_PATH=$(find /tmp/vantopay_full/build -name "app-release.apk" -type f 2>/dev/null | head -1)
-          if [ -z "$APK_PATH" ]; then
-            echo "Release APK not found, looking for any APK..."
-            APK_PATH=$(find /tmp/vantopay_full/build -name "*.apk" -type f 2>/dev/null | head -1)
+          cd /tmp/vantopay_full
+          echo "=== Building release APK ==="
+          flutter build apk --release --no-tree-shake-icons 2>&1
+          BUILD_EXIT=$?
+          echo "Build exit code: $BUILD_EXIT"
+          
+          if [ $BUILD_EXIT -ne 0 ]; then
+            echo "=== Release build failed, trying debug ==="
+            flutter build apk --debug 2>&1 || true
           fi
-          if [ -z "$APK_PATH" ]; then
-            echo "ERROR: No APK found!"
-            find /tmp/vantopay_full/build -type f 2>/dev/null
-            exit 1
+          
+          echo "=== All APK files ==="
+          find /tmp/vantopay_full/build -name "*.apk" -type f 2>/dev/null || echo "No APKs found"
+          echo "=== Build dir listing ==="
+          ls -laR /tmp/vantopay_full/build/app/outputs/ 2>/dev/null || echo "No outputs dir"
+          exit $BUILD_EXIT
+
+      - name: Copy APK to workspace
+        if: success()
+        run: |
+          APK=$(find /tmp/vantopay_full/build -name "app-release.apk" -type f 2>/dev/null | head -1)
+          if [ -z "$APK" ]; then
+            APK=$(find /tmp/vantopay_full/build -name "*.apk" -type f 2>/dev/null | head -1)
           fi
-          echo "Found APK at: $APK_PATH"
-          cp "$APK_PATH" ./VantoPay.apk
+          echo "APK path: $APK"
+          cp "$APK" ./VantoPay.apk
           ls -lh ./VantoPay.apk
 
+      - name: Upload build logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs
+          path: |
+            /tmp/vantopay_full/build/
+          retention-days: 3
+
       - name: Create Release with APK
+        if: success()
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ github.run_number }}
           name: VantoPay v${{ github.run_number }}
           files: ./VantoPay.apk
           generate_release_notes: true
-          draft: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: VantoPay-APK
-          path: ./VantoPay.apk
-          retention-days: 30
