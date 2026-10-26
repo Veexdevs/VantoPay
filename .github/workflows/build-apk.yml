@@ -18,12 +18,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.24.5'
           channel: 'stable'
-          cache: true
 
       - name: Create Flutter project
         run: |
@@ -33,7 +38,9 @@ jobs:
       - name: Overlay custom code
         run: |
           rm -rf /tmp/vantopay_full/lib
+          rm -rf /tmp/vantopay_full/assets
           cp -r flutter_app/lib /tmp/vantopay_full/lib
+          cp -r flutter_app/assets /tmp/vantopay_full/assets
           cp flutter_app/pubspec.yaml /tmp/vantopay_full/pubspec.yaml
 
       - name: Flutter pub get
@@ -41,28 +48,30 @@ jobs:
           cd /tmp/vantopay_full
           flutter pub get
 
-      - name: Build APK (with verbose output)
+      - name: Build APK
         run: |
           cd /tmp/vantopay_full
-          flutter build apk --release --no-tree-shake-icons -v 2>&1 | tee build_output.log
-          echo "EXIT CODE: $?"
+          flutter build apk --release --no-tree-shake-icons 2>&1
+          echo "=== APK files ==="
+          find /tmp/vantopay_full/build -name "*.apk" -type f 2>/dev/null
 
-      - name: Find APK
-        if: always()
+      - name: Copy APK to workspace
         run: |
-          echo "=== Looking for APK files ==="
-          find /tmp/vantopay_full/build -name "*.apk" 2>/dev/null || echo "No APK found in build/"
-          find /tmp/vantopay_full -name "*.apk" 2>/dev/null || echo "No APK found anywhere"
-          echo "=== Build directory structure ==="
-          find /tmp/vantopay_full/build -type f 2>/dev/null | head -50 || echo "No build directory"
+          APK=$(find /tmp/vantopay_full/build -name "app-release.apk" -type f 2>/dev/null | head -1)
+          if [ -z "$APK" ]; then
+            echo "No release APK found, looking for debug..."
+            APK=$(find /tmp/vantopay_full/build -name "*.apk" -type f 2>/dev/null | head -1)
+          fi
+          echo "APK: $APK"
+          cp "$APK" ./VantoPay.apk
+          ls -lh ./VantoPay.apk
 
-      - name: Upload APK to Release
-        if: success()
+      - name: Create Release with APK
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ github.run_number }}
           name: VantoPay v${{ github.run_number }}
-          files: /tmp/vantopay_full/build/app/outputs/flutter-apk/app-release.apk
+          files: ./VantoPay.apk
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
