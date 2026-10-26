@@ -103,7 +103,24 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
               scale: _scaleAnimation,
               child: FadeTransition(
                 opacity: _fadeAnimation,
-                child: Image.asset('assets/logo_dark.png', width: 120, height: 120),
+                child: Container(
+                width: 120,
+                height: 120,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: const Center(
+                  child: Text(
+                    'V',
+                    style: TextStyle(
+                      fontSize: 72,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF0A0A0A),
+                    ),
+                  ),
+                ),
+              ),
               ),
             ),
             const SizedBox(height: 24),
@@ -250,7 +267,16 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   borderRadius: BorderRadius.circular(12),
                   color: const Color(0xFF1A1A1A),
                 ),
-                child: Image.asset('assets/logo_dark.png'),
+                child: const Center(
+                  child: Text(
+                    'V',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
               ),
               const SizedBox(width: 12),
               Column(

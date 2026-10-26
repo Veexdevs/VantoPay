@@ -34,7 +34,11 @@ jobs:
       - name: Build APK
         run: |
           cd flutter_app
-          flutter build apk --release --no-tree-shake-icons
+          flutter build apk --release --no-tree-shake-icons 2>&1 | tee /tmp/build.log || {
+            echo "=== BUILD FAILED ==="
+            tail -100 /tmp/build.log
+            exit 1
+          }
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
