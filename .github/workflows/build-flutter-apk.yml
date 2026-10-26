@@ -1,4 +1,4 @@
-name: Build VantoPay APK (Flutter)
+name: Build VantoPay Flutter APK
 
 on:
   push:
@@ -9,9 +9,10 @@ permissions:
   contents: write
 
 jobs:
-  build-apk:
+  build-flutter-apk:
     name: Build Flutter APK
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
       - name: Checkout code
@@ -22,45 +23,32 @@ jobs:
         with:
           flutter-version: '3.24.5'
           channel: 'stable'
+          cache: true
 
       - name: Install dependencies
-        run: flutter pub get
-        working-directory: ./flutter_app
+        run: |
+          cd flutter_app
+          flutter pub get
+          flutter doctor
 
       - name: Build APK
-        run: flutter build apk --release
-        working-directory: ./flutter_app
+        run: |
+          cd flutter_app
+          flutter build apk --release --no-tree-shake-icons
 
-      - name: Upload APK
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: VantoPay-APK
+          name: VantoPay-Flutter-APK
           path: flutter_app/build/app/outputs/flutter-apk/app-release.apk
           retention-days: 30
-
-      - name: Commit APK to repo
-        run: |
-          git config --global user.email "actions@github.com"
-          git config --global user.name "GitHub Actions"
-          mkdir -p releases
-          cp flutter_app/build/app/outputs/flutter-apk/app-release.apk releases/VantoPay.apk
-          cd releases
-          zip -9 VantoPay.apk.zip VantoPay.apk
-          rm VantoPay.apk
-          cd ..
-          git add -f releases/VantoPay.apk.zip
-          git diff --cached --quiet || {
-            git commit -m "release: VantoPay APK v${{ github.run_number }}"
-            git push
-          }
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          if-no-files-found: error
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ github.run_number }}
-          name: VantoPay v${{ github.run_number }}
+          tag_name: flutter-v${{ github.run_number }}
+          name: VantoPay Flutter v${{ github.run_number }}
           files: flutter_app/build/app/outputs/flutter-apk/app-release.apk
           generate_release_notes: true
           draft: false
