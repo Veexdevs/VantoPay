@@ -27,66 +27,42 @@ jobs:
 
       - name: Create Flutter project
         run: |
-          # Backup our code
-          cp -r flutter_app/lib /tmp/lib_backup
-          cp flutter_app/pubspec.yaml /tmp/pubspec_backup.yaml
-          
-          # Create full Flutter project
           cd /tmp
           flutter create vantopay_project --project-name vantopay --org com.veexdevs
+          echo "=== Project created ==="
+          ls -la vantopay_project/
           
-          # Copy our code
-          rm -rf /tmp/vantopay_project/lib
-          cp -r /tmp/lib_backup /tmp/vantopay_project/lib
-          cp /tmp/pubspec_backup.yaml /tmp/vantopay_project/pubspec.yaml
+          # Backup our code
+          cp -r /home/runner/work/VantoPay/VantoPay/flutter_app/lib /tmp/vantopay_project/lib
+          cp /home/runner/work/VantoPay/VantoPay/flutter_app/pubspec.yaml /tmp/vantopay_project/pubspec.yaml
           
           # Replace in repo
-          rm -rf flutter_app
-          cp -r /tmp/vantopay_project flutter_app
+          rm -rf /home/runner/work/VantoPay/VantoPay/flutter_app
+          cp -r /tmp/vantopay_project /home/runner/work/VantoPay/VantoPay/flutter_app
+          
+          echo "=== Final structure ==="
+          ls -la /home/runner/work/VantoPay/VantoPay/flutter_app/
+          ls -la /home/runner/work/VantoPay/VantoPay/flutter_app/android/
 
       - name: Install dependencies
         run: cd flutter_app && flutter pub get
 
-      - name: Build APK with logs
-        id: build
-        run: |
-          cd flutter_app
-          flutter build apk --release --verbose > /tmp/build.log 2>&1
-          BUILD_EXIT=$?
-          echo "Build exit code: $BUILD_EXIT"
-          if [ $BUILD_EXIT -ne 0 ]; then
-            echo "=== LAST 200 LINES OF BUILD LOG ==="
-            tail -200 /tmp/build.log
-            exit 1
-          fi
-        continue-on-error: true
-
-      - name: Show build output
-        if: always()
-        run: |
-          echo "=== Looking for APK ==="
-          find flutter_app/build -name "*.apk" 2>/dev/null || echo "No APK found"
-          echo "=== Build dir structure ==="
-          ls -la flutter_app/build/ 2>/dev/null || echo "No build dir"
-          ls -la flutter_app/build/app/ 2>/dev/null || echo "No app dir"
-          ls -la flutter_app/build/app/outputs/ 2>/dev/null || echo "No outputs dir"
+      - name: Build APK
+        run: cd flutter_app && flutter build apk --release
 
       - name: Upload APK
-        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: VantoPay-APK
-          path: flutter_app/build/app/outputs/flutter-apk/*.apk
-          if-no-files-found: warn
+          path: flutter_app/build/app/outputs/flutter-apk/app-release.apk
           retention-days: 30
 
       - name: Create Release
-        if: always()
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ github.run_number }}
           name: VantoPay v${{ github.run_number }}
-          files: flutter_app/build/app/outputs/flutter-apk/*.apk
+          files: flutter_app/build/app/outputs/flutter-apk/app-release.apk
           generate_release_notes: true
           draft: false
         env:
