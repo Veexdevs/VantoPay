@@ -6,7 +6,39 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "electron": "electron electron/main.js",
+    "build:electron": "electron-builder",
+    "build:android": "eas build --profile production --platform android",
+    "build:ios": "eas build --profile production --platform ios"
+  },
+  "build": {
+    "appId": "com.veexdevs.vantopay",
+    "productName": "VantoPay",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "electron/**/*",
+      "web/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": ["nsis", "portable"],
+      "icon": "assets/icon.png"
+    },
+    "mac": {
+      "target": ["dmg", "zip"],
+      "icon": "assets/icon.png"
+    },
+    "linux": {
+      "target": ["AppImage", "deb"],
+      "icon": "assets/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
   },
   "dependencies": {
     "expo": "~52.0.37",
@@ -29,7 +61,9 @@
   "devDependencies": {
     "@babel/core": "^7.25.2",
     "typescript": "~5.3.3",
-    "@types/react": "~18.3.12"
+    "@types/react": "~18.3.12",
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8"
   },
   "private": true
 }
