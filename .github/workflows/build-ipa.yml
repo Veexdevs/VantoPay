@@ -1,0 +1,79 @@
+name: Build VantoPay IPA
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-ios:
+    name: Build iOS IPA
+    runs-on: macos-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.5'
+          channel: 'stable'
+
+      - name: Create Flutter project
+        run: |
+          cd /tmp
+          flutter create vantopay_full --project-name vantopay --org com.veexdevs --platforms ios
+
+      - name: Overlay custom code
+        run: |
+          rm -rf /tmp/vantopay_full/lib
+          rm -rf /tmp/vantopay_full/assets
+          cp -r flutter_app/lib /tmp/vantopay_full/lib
+          cp -r flutter_app/assets /tmp/vantopay_full/assets
+          cp flutter_app/pubspec.yaml /tmp/vantopay_full/pubspec.yaml
+
+      - name: Flutter pub get
+        run: |
+          cd /tmp/vantopay_full
+          flutter pub get
+
+      - name: Build iOS (no codesign)
+        run: |
+          cd /tmp/vantopay_full
+          flutter build ios --release --no-codesign --no-tree-shake-icons 2>&1
+          echo "=== Build complete ==="
+          find /tmp/vantopay_full/build -name "*.app" -type d 2>/dev/null || echo "No .app found"
+
+      - name: Create IPA from .app
+        run: |
+          APP_PATH=$(find /tmp/vantopay_full/build -name "*.app" -type d 2>/dev/null | head -1)
+          if [ -z "$APP_PATH" ]; then
+            echo "No .app found, build may have failed"
+            find /tmp/vantopay_full/build -type f 2>/dev/null | head -20
+            exit 1
+          fi
+          echo "App found at: $APP_PATH"
+          
+          # Create Payload directory and copy .app into it
+          mkdir -p /tmp/Payload
+          cp -r "$APP_PATH" /tmp/Payload/
+          
+          # Create IPA (which is just a zip)
+          cd /tmp
+          zip -r /tmp/VantoPay.ipa Payload/
+          ls -lh /tmp/VantoPay.ipa
+
+      - name: Create Release with IPA
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ios-v${{ github.run_number }}
+          name: VantoPay iOS v${{ github.run_number }}
+          files: /tmp/VantoPay.ipa
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
