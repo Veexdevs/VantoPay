@@ -31,7 +31,8 @@ jobs:
           java-version: '17'
 
       - name: Install dependencies
-        run: npm ci --legacy-peer-deps || npm install --legacy-peer-deps
+        run: |
+          npm ci --legacy-peer-deps || npm install --legacy-peer-deps
         env:
           NODE_OPTIONS: '--max-old-space-size=4096'
 
@@ -44,39 +45,14 @@ jobs:
         run: |
           cd android
           chmod +x ./gradlew
-          ./gradlew assembleDebug --no-daemon
-
-      - name: Compress APK
-        run: |
-          mkdir -p releases
-          APK=$(find . -name "*.apk" -type f | head -1)
-          echo "Found APK: $APK ($(du -h $APK | cut -f1))"
-          cp "$APK" releases/app-debug.apk
-          cd releases
-          zip -9 VantoPay.apk.zip app-debug.apk
-          rm app-debug.apk
-          echo "ZIP size: $(du -h VantoPay.apk.zip | cut -f1)"
-          ls -lh
-
-      - name: Commit ZIP to repo
-        run: |
-          git config --global user.email "actions@github.com"
-          git config --global user.name "GitHub Actions"
-          git add -f releases/VantoPay.apk.zip
-          git diff --cached --quiet || {
-            git commit -m "release: VantoPay APK v${{ github.run_number }} [skip ci]"
-            git push origin HEAD:main
-            echo "Pushed!"
-          }
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ./gradlew assembleDebug --no-daemon --stacktrace
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ github.run_number }}
           name: VantoPay v${{ github.run_number }}
-          files: releases/app-debug.apk
+          files: android/app/build/outputs/apk/debug/app-debug.apk
           generate_release_notes: true
           draft: false
         env:
@@ -86,6 +62,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: VantoPay-APK
-          path: releases/app-debug.apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
           retention-days: 30
           if-no-files-found: warn
