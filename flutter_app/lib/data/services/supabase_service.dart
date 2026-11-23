@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/config.dart';
 import 'api_client.dart';
@@ -32,7 +33,9 @@ class AuthService extends ChangeNotifier {
       notifyListeners();
       return;
     }
-    _client = Supabase.initialize(
+    // Supabase.initialize returns the Supabase wrapper (Future<Supabase>);
+    // the raw SupabaseClient lives on `.client`.
+    _client = (await Supabase.initialize(
       AppConfig.supabaseUrl,
       AppConfig.supabaseAnonKey,
       googleClientId: AppConfig.googleClientId.isNotEmpty
@@ -40,7 +43,7 @@ class AuthService extends ChangeNotifier {
           : null,
       autoRefreshToken: true,
       persistSession: true,
-    );
+    )).client;
     _client!.auth.stream.listen((event) {
       final session = _client!.auth.currentSession;
       if (session != null) {
@@ -64,29 +67,34 @@ class AuthService extends ChangeNotifier {
   }
 
   /// Continue with Google OAuth (provider configured in Supabase).
+  ///
+  /// `signInWithOAuth` is not exposed by supabase_flutter 2.x's public API, so
+  /// build the provider's authorization URL via the auth client and open it in
+  /// the system browser; Supabase handles the redirect and session exchange.
   Future<void> signInWithGoogle() async {
     _requireClient();
-    // Supabase handles the in-app OAuth redirect; the provider is configured
-    // in the Supabase auth settings.
-    await _client!.auth.signInWithOAuth(const OAuthProvider.google);
+    final response = await _client!.auth.getOAuthSignInUrl(
+      provider: const OAuthProvider.google,
+    );
+    await launchUrl(Uri.parse(response.url), mode: LaunchMode.externalApplication);
   }
 
   Future<void> signInWithEmail(String email, String password) async {
     _requireClient();
     await _client!.auth.signInWithPassword(
-        {'email': email, 'password': password});
+        email: email, password: password);
     await _afterAuth();
   }
 
   Future<void> signUp(String email, String password) async {
     _requireClient();
-    await _client!.auth.signUp({'email': email, 'password': password});
+    await _client!.auth.signUp(email: email, password: password);
     // Supabase sends a confirmation email; the user must verify before login.
   }
 
   Future<void> resendConfirmation(String email) async {
     _requireClient();
-    await _client!.auth.resendConfirmationEmail(email);
+    await _client!.auth.resend(email: email, type: OtpType.signup);
   }
 
   Future<void> forgotPassword(String email) async {
@@ -96,7 +104,7 @@ class AuthService extends ChangeNotifier {
 
   Future<void> setNewPassword(String newPassword) async {
     _requireClient();
-    await _client!.auth.updateUser({'password': newPassword});
+    await _client!.auth.updateUser(UserAttributes(password: newPassword));
   }
 
   Future<void> signOut() async {
