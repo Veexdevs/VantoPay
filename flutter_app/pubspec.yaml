@@ -11,10 +11,13 @@ dependencies:
   flutter:
     sdk: flutter
   # Pinned to versions compatible with Flutter 3.24.x / Dart 3.5.
+  # NOTE: intl must stay at 0.19.0 — Flutter's flutter_localizations pins intl
+  # exactly to 0.19.0, so a different intl would break version solving.
+  # decimal 0.3.x is Dart-2-only (sdk <3.0.0); use ^3.0.0 (Dart 3, intl 0.19.0).
   supabase_flutter: 2.8.0
   go_router: 14.2.0
   http: 1.2.0
-  decimal: 0.3.2
+  decimal: ^3.0.0
   intl: 0.19.0
   qr_flutter: 4.1.0
   cupertino_icons: 1.0.8
