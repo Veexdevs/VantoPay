@@ -135,7 +135,7 @@ class _TransferScreenState extends State<TransferScreen> {
                   TextField(
                     controller: _destCtrl,
                     keyboardType: TextInputType.number,
-                    lengthLimitingTextInput: 8,
+                    maxLength: 8,
                     decoration: const InputDecoration(
                       labelText: 'Número da conta VantoPay',
                       prefixIcon: Icon(Icons.account_balance_wallet_outlined),
@@ -163,7 +163,7 @@ class _TransferScreenState extends State<TransferScreen> {
                   TextField(
                     controller: _bankCtrl,
                     keyboardType: TextInputType.number,
-                    lengthLimitingTextInput: 3,
+                    maxLength: 3,
                     decoration: const InputDecoration(
                       labelText: 'Código do banco (3 dígitos)',
                       prefixIcon: Icon(Icons.bank_outlined),
