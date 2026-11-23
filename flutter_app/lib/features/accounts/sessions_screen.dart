@@ -26,7 +26,8 @@ class _SessionsScreenState extends State<SessionsScreen> {
 
   Future<void> _load() async {
     try {
-      setState(() => _sessions = await AccountService.instance.sessions());
+      final sessions = await AccountService.instance.sessions();
+      setState(() => _sessions = sessions);
     } catch (_) {
       // ignore
     } finally {

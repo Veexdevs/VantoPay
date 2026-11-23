@@ -27,9 +27,11 @@ class _StatementScreenState extends State<StatementScreen> {
 
   Future<void> _load() async {
     try {
+      final entries = await AccountService.instance.statement(limit: 200);
+      final balance = await AccountService.instance.fetchBalance();
       setState(() {
-        _entries = await AccountService.instance.statement(limit: 200);
-        _balance = await AccountService.instance.fetchBalance();
+        _entries = entries;
+        _balance = balance;
       });
     } catch (_) {
       // ignore

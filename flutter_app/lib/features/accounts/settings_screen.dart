@@ -97,7 +97,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   controller: _txLimitCtrl,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   decoration: const InputDecoration(
-                    labelText: 'Limite por transação (R$)',
+                    labelText: 'Limite por transação (R\$)',
                     prefixIcon: Icon(Icons.tune_outlined),
                   ),
                 ),
@@ -106,7 +106,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   controller: _dailyLimitCtrl,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   decoration: const InputDecoration(
-                    labelText: 'Limite diário (R$)',
+                    labelText: 'Limite diário (R\$)',
                     prefixIcon: Icon(Icons.calendar_today_outlined),
                   ),
                 ),

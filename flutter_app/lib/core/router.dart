@@ -20,8 +20,6 @@ import '../features/pix/pix_screen.dart';
 import '../features/pix/receipt_screen.dart';
 import '../features/transfers/transfer_screen.dart';
 
-final _shellNavigatorKey = GlobalKey<NavigatorState>();
-
 class AppRouter {
   AppRouter._();
 
@@ -44,7 +42,6 @@ class AppRouter {
 
       // ── Authenticated shell ──────────────────────────────────────────
       StatefulShellRoute.indexedStack(
-        navigationShellKey: _shellNavigatorKey,
         builder: (context, state, navigationShell) {
           return Scaffold(
             body: navigationShell,

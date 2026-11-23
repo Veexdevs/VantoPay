@@ -39,10 +39,10 @@ class AuthService extends ChangeNotifier {
     // Google OAuth client id is configured on the Supabase project, not passed
     // to initialize (the v1 googleClientId/persistSession params are gone).
     _client = (await Supabase.initialize(
-      AppConfig.supabaseUrl,
-      AppConfig.supabaseAnonKey,
+      url: AppConfig.supabaseUrl,
+      anonKey: AppConfig.supabaseAnonKey,
     )).client;
-    _client!.auth.stream.listen((event) {
+    _client!.auth.onAuthStateChange.listen((event) {
       final session = _client!.auth.currentSession;
       if (session != null) {
         ApiClient.setToken(session.accessToken);
@@ -66,15 +66,18 @@ class AuthService extends ChangeNotifier {
 
   /// Continue with Google OAuth (provider configured in Supabase).
   ///
-  /// `signInWithOAuth` is not exposed by supabase_flutter 2.x's public API, so
-  /// build the provider's authorization URL via the auth client and open it in
-  /// the system browser; Supabase handles the redirect and session exchange.
+  /// Builds the provider's authorization URL directly against the Supabase auth
+  /// endpoint and opens it in the system browser; Supabase handles the redirect
+  /// and session exchange. The redirect target must be registered in the
+  /// Supabase project's Auth URL allow-list (set WEB_REDIRECT_URI).
   Future<void> signInWithGoogle() async {
     _requireClient();
-    final response = await _client!.auth.getOAuthSignInUrl(
-      provider: const OAuthProvider.google,
-    );
-    await launchUrl(Uri.parse(response.url), mode: LaunchMode.externalApplication);
+    final base = AppConfig.supabaseUrl.replaceAll(RegExp(r'/$'), '');
+    final redirect = AppConfig.webRedirectUri.isEmpty
+        ? ''
+        : '&redirect_to=${Uri.encodeQueryComponent(AppConfig.webRedirectUri)}';
+    final url = Uri.parse('$base/auth/v1/authorize?provider=google$redirect');
+    await launchUrl(url, mode: LaunchMode.externalApplication);
   }
 
   Future<void> signInWithEmail(String email, String password) async {

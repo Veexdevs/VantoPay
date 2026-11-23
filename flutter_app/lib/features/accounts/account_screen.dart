@@ -30,9 +30,11 @@ class _AccountScreenState extends State<AccountScreen> {
 
   Future<void> _load() async {
     try {
+      final account = await AccountService.instance.fetchAccount();
+      final balance = await AccountService.instance.fetchBalance();
       setState(() {
-        _account = await AccountService.instance.fetchAccount();
-        _balance = await AccountService.instance.fetchBalance();
+        _account = account;
+        _balance = balance;
       });
     } catch (_) {
       // ignore
@@ -101,7 +103,9 @@ class _AccountScreenState extends State<AccountScreen> {
                         color: isDark ? VantoPayTheme.surfaceAlt : const Color(0xFFF4F4F5),
                         borderRadius: BorderRadius.circular(18),
                       ),
-                      child: const Center(child: Text('VP', fontWeight: FontWeight.w800)),
+                      child: const Center(
+                          child: Text('VP',
+                              style: TextStyle(fontWeight: FontWeight.w800))),
                     ),
                     const SizedBox(width: 16),
                     Expanded(

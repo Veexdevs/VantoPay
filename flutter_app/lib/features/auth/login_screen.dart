@@ -101,7 +101,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 24),
                 FilledButton.icon(
                   onPressed: _loading ? null : _signInWithGoogle,
-                  icon: const Icon(Icons.google),
+                  icon: const Icon(Icons.account_circle),
                   label: const Text('Continuar com Google'),
                   style: FilledButton.styleFrom(
                       padding: const EdgeInsets.symmetric(

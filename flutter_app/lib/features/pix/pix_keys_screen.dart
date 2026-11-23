@@ -38,7 +38,8 @@ class _PixKeysScreenState extends State<PixKeysScreen> {
 
   Future<void> _load() async {
     try {
-      setState(() => _keys = await PixService.instance.keys());
+      final keys = await PixService.instance.keys();
+      setState(() => _keys = keys);
     } catch (_) {
       // ignore
     } finally {

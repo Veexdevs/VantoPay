@@ -116,7 +116,7 @@ class ScreenScaffold extends StatelessWidget {
     this.subtitle,
     this.leading,
     this.trailing,
-    this.body,
+    required this.body,
     this.padding = const EdgeInsets.symmetric(horizontal: 20),
   });
 
@@ -296,7 +296,7 @@ class ErrorBanner extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF1A1A1A),
         borderRadius: BorderRadius.circular(14),
-        border: const BorderSide(color: VantoPayTheme.line),
+        border: const Border.all(color: VantoPayTheme.line),
       ),
       child: Row(children: [
         const Icon(Icons.warning_amber_outlined, size: 20),

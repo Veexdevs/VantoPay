@@ -27,7 +27,8 @@ class _PixHistoryScreenState extends State<PixHistoryScreen> {
 
   Future<void> _load() async {
     try {
-      setState(() => _items = await PixService.instance.history(limit: 100));
+      final items = await PixService.instance.history(limit: 100);
+      setState(() => _items = items);
     } catch (_) {
       // ignore
     } finally {
@@ -80,17 +81,15 @@ class _PixHistoryScreenState extends State<PixHistoryScreen> {
                                     children: [
                                       Text(tx.isCredit ? 'PIX recebido' : 'PIX enviado',
                                           style: const TextStyle(fontWeight: FontWeight.w600)),
-                                      if (tx.counterpartyName != null &&
-                                          tx.counterpartyName!.isNotEmpty)
-                                        Text(tx.counterpartyName!,
-                                            style: TextStyle(
-                                                fontSize: 13,
-                                                color: isDark ? VantoPayTheme.ghost : const Color(0xFF6B6B70))),
-                                      else
-                                        Text('—',
-                                            style: TextStyle(
-                                                fontSize: 13,
-                                                color: isDark ? VantoPayTheme.ghost : const Color(0xFF6B6B70))),
+                                      Text(tx.counterpartyName != null &&
+                                              tx.counterpartyName!.isNotEmpty
+                                          ? tx.counterpartyName!
+                                          : '—',
+                                          style: TextStyle(
+                                              fontSize: 13,
+                                              color: isDark
+                                                  ? VantoPayTheme.ghost
+                                                  : const Color(0xFF6B6B70))),
                                     ],
                                   ),
                                 ),
