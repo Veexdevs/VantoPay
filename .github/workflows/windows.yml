@@ -1,0 +1,70 @@
+name: Build VantoPay Windows EXE
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'flutter_app/**'
+      - '.github/workflows/windows.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    name: Build Windows EXE
+    runs-on: windows-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.5'
+          channel: 'stable'
+
+      - name: Create Flutter project
+        shell: bash
+        run: |
+          cd /tmp
+          flutter create vantopay_windows --project-name vantopay --org com.veexdevs --platforms windows
+
+      - name: Overlay custom code
+        shell: bash
+        run: |
+          rm -rf /tmp/vantopay_windows/lib /tmp/vantopay_windows/assets
+          cp -r flutter_app/lib /tmp/vantopay_windows/lib
+          cp -r flutter_app/assets /tmp/vantopay_windows/assets
+          cp flutter_app/pubspec.yaml /tmp/vantopay_windows/pubspec.yaml
+
+      - name: Flutter pub get
+        shell: bash
+        run: cd /tmp/vantopay_windows && flutter pub get
+
+      - name: Build Windows release
+        shell: bash
+        run: cd /tmp/vantopay_windows && flutter build windows --release --no-tree-shake-icons
+
+      - name: Package distribution
+        shell: bash
+        run: |
+          SRC="/tmp/vantopay_windows/build/windows/x64/runner/Release"
+          mkdir -p /tmp/dist
+          cp -r "$SRC" /tmp/dist/VantoPay
+          cd /tmp/dist
+          zip -r /tmp/VantoPay-windows.zip VantoPay
+          ls -lh /tmp/VantoPay-windows.zip
+
+      - name: Create Release with EXE
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: windows-v${{ github.run_number }}
+          name: VantoPay Windows v${{ github.run_number }}
+          files: /tmp/VantoPay-windows.zip
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

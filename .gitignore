@@ -10,6 +10,24 @@ flutter_app/.ios/
 flutter_app/.macos/
 flutter_app/.windows/
 flutter_app/.linux/
+flutter_app/.web/
+
+# Python / Backend
+backend/.venv/
+backend/venv/
+backend/__pycache__/
+backend/**/__pycache__/
+backend/*.pyc
+backend/.env
+backend/vantopay.db
+*.sqlite
+*.sqlite3
+
+# Environment & secrets — never commit real credentials
+.env
+.env.local
+.env.*.local
+!.env.example
 
 # IDE
 .vscode/
@@ -21,3 +39,15 @@ Thumbs.db
 
 # Misc
 *.iml
+.venv/
+venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+coverage/
+dist/
+*.apk
+*.ipa
+*.zip
+VantoPay.exe

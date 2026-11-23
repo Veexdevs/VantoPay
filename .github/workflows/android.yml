@@ -1,0 +1,86 @@
+name: Build VantoPay Android APK
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'flutter_app/**'
+      - '.github/workflows/android.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-apk:
+    name: Build Signed Android APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.5'
+          channel: 'stable'
+
+      - name: Create Flutter project
+        run: |
+          cd /tmp
+          flutter create vantopay_android --project-name vantopay --org com.veexdevs --platforms android
+
+      - name: Overlay custom code
+        run: |
+          rm -rf /tmp/vantopay_android/lib /tmp/vantopay_android/assets
+          cp -r flutter_app/lib /tmp/vantopay_android/lib
+          cp -r flutter_app/assets /tmp/vantopay_android/assets
+          cp flutter_app/pubspec.yaml /tmp/vantopay_android/pubspec.yaml
+
+      - name: Flutter pub get
+        run: cd /tmp/vantopay_android && flutter pub get
+
+      - name: Configure release signing
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          mkdir -p /tmp/vantopay_android/android/app
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > /tmp/vantopay_android/android/app/vantopay-release.jks
+          cat > /tmp/vantopay_android/android/key.properties <<EOF
+          storeFile=/tmp/vantopay_android/android/app/vantopay-release.jks
+          storePassword=$ANDROID_KEYSTORE_PASSWORD
+          keyAlias=$ANDROID_KEY_ALIAS
+          keyPassword=$ANDROID_KEY_PASSWORD
+          EOF
+          chmod 600 /tmp/vantopay_android/android/key.properties
+
+      - name: Build signed release APK
+        run: cd /tmp/vantopay_android && flutter build apk --release --no-tree-shake-icons
+
+      - name: Copy APK
+        run: |
+          APK=$(find /tmp/vantopay_android/build -name "app-release.apk" -type f | head -1)
+          if [ -z "$APK" ]; then echo "No release APK found"; exit 1; fi
+          cp "$APK" ./VantoPay-android.apk
+          ls -lh ./VantoPay-android.apk
+
+      - name: Create Release with APK
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: android-v${{ github.run_number }}
+          name: VantoPay Android v${{ github.run_number }}
+          files: ./VantoPay-android.apk
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
