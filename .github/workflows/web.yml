@@ -1,0 +1,62 @@
+name: Deploy VantoPay Web
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'flutter_app/**'
+      - '.github/workflows/web.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-web:
+    name: Build & Deploy Web (Vercel)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.5'
+          channel: 'stable'
+
+      - name: Create Flutter project
+        run: |
+          cd /tmp
+          flutter create vantopay_web --project-name vantopay --platforms web
+
+      - name: Overlay custom code
+        run: |
+          rm -rf /tmp/vantopay_web/lib /tmp/vantopay_web/assets
+          cp -r flutter_app/lib /tmp/vantopay_web/lib
+          cp -r flutter_app/assets /tmp/vantopay_web/assets
+          cp flutter_app/pubspec.yaml /tmp/vantopay_web/pubspec.yaml
+          cp flutter_app/vercel.json /tmp/vantopay_web/vercel.json
+
+      - name: Flutter pub get
+        run: cd /tmp/vantopay_web && flutter pub get
+
+      - name: Build web
+        run: cd /tmp/vantopay_web && flutter build web --release
+
+      - name: Configure SPA routing
+        run: cp /tmp/vantopay_web/vercel.json /tmp/vantopay_web/build/web/vercel.json
+
+      - name: Deploy to Vercel
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          cd /tmp/vantopay_web/build/web
+          npx --yes vercel@latest --prod \
+            --token "$VERCEL_TOKEN" \
+            --scope "$VERCEL_ORG_ID" \
+            --project "$VERCEL_PROJECT_ID"
