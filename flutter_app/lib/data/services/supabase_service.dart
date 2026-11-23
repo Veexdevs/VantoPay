@@ -34,15 +34,13 @@ class AuthService extends ChangeNotifier {
       return;
     }
     // Supabase.initialize returns the Supabase wrapper (Future<Supabase>);
-    // the raw SupabaseClient lives on `.client`.
+    // the raw SupabaseClient lives on `.client`. v2 always persists sessions;
+    // autoRefreshToken defaults to true (configure via authOptions if needed).
+    // Google OAuth client id is configured on the Supabase project, not passed
+    // to initialize (the v1 googleClientId/persistSession params are gone).
     _client = (await Supabase.initialize(
       AppConfig.supabaseUrl,
       AppConfig.supabaseAnonKey,
-      googleClientId: AppConfig.googleClientId.isNotEmpty
-          ? AppConfig.googleClientId
-          : null,
-      autoRefreshToken: true,
-      persistSession: true,
     )).client;
     _client!.auth.stream.listen((event) {
       final session = _client!.auth.currentSession;
