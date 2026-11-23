@@ -8,7 +8,7 @@ class AppFormat {
 
   static String brl(double value, {bool sign = false}) {
     final formatter = NumberFormat.currency(
-        locale: 'pt_BR', symbol: 'R$', decimalDigits: 2);
+        locale: 'pt_BR', symbol: 'R\$', decimalDigits: 2);
     final text = formatter.format(value);
     if (sign && value != 0) {
       return '${value > 0 ? '+' : '-'}$text';

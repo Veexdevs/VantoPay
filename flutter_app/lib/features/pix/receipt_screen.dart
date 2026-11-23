@@ -42,7 +42,8 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
       return;
     }
     try {
-      setState(() => _tx = await PixService.instance.transaction(id));
+      final tx = await PixService.instance.transaction(id);
+      setState(() => _tx = tx);
     } catch (e) {
       setState(() =>
           _error = e is ApiException ? e.message : 'Erro ao carregar comprovante.');

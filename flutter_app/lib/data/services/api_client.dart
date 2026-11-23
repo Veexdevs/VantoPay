@@ -16,12 +16,15 @@ class ApiClient {
 
   static void setToken(String? token) => _token = token;
 
-  static Uri _uri(String path, Map<String, String> query = {}) {
+  static Uri _uri(String path, [Map<String, String>? query]) {
     final base = AppConfig.apiBaseUrl.replaceAll(RegExp(r'/$'), '');
     final uri = Uri.parse('$base$path');
-    if (query.isEmpty) return uri;
-    return uri.replace(
-        query: query.map((k, v) => MapEntry(k, v.toString())));
+    if (query == null || query.isEmpty) return uri;
+    final qs = query
+        .map((k, v) =>
+            '${Uri.encodeQueryComponent(k)}=${Uri.encodeQueryComponent(v.toString())}')
+        .join('&');
+    return uri.replace(query: qs);
   }
 
   static Map<String, String> get _headers => {
@@ -31,20 +34,20 @@ class ApiClient {
       };
 
   static Future<Map<String, dynamic>> get(
-    String path, [Map<String, String> query = {}]) async {
+    String path, [Map<String, String>? query]) async {
     final res = await http.get(_uri(path, query), headers: _headers);
     return _decodeObject(res);
   }
 
   static Future<List<Map<String, dynamic>>> getList(
-    String path, [Map<String, String> query = {}]) async {
+    String path, [Map<String, String>? query]) async {
     final res = await http.get(_uri(path, query), headers: _headers);
     return _decodeList(res);
   }
 
   static Future<Map<String, dynamic>> post(
       String path, Map<String, dynamic> body,
-      [Map<String, String> query = {}]) async {
+      [Map<String, String>? query]) async {
     final res = await http.post(_uri(path, query),
         headers: _headers, body: jsonEncode(body));
     return _decodeObject(res);

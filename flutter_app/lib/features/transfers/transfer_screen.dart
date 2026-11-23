@@ -166,7 +166,7 @@ class _TransferScreenState extends State<TransferScreen> {
                     maxLength: 3,
                     decoration: const InputDecoration(
                       labelText: 'Código do banco (3 dígitos)',
-                      prefixIcon: Icon(Icons.bank_outlined),
+                      prefixIcon: Icon(Icons.account_balance),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -193,7 +193,7 @@ class _TransferScreenState extends State<TransferScreen> {
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
                   decoration: const InputDecoration(
-                    labelText: 'Valor (R$)',
+                    labelText: 'Valor (R\$)',
                     prefixIcon: Icon(Icons.attach_money_outlined),
                   ),
                 ),
@@ -202,7 +202,7 @@ class _TransferScreenState extends State<TransferScreen> {
                   controller: _refCtrl,
                   decoration: const InputDecoration(
                     labelText: 'Observação (opcional)',
-                    prefixIcon: Icon(Icons.note_outline),
+                    prefixIcon: Icon(Icons.edit_note_outlined),
                   ),
                 ),
                 if (_error != null) ...[const SizedBox(height: 16), ErrorBanner(message: _error!)],

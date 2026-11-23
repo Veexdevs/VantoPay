@@ -86,7 +86,7 @@ class _PixReceiveScreenState extends State<PixReceiveScreen> {
                 const TextInputType.numberWithOptions(decimal: true),
             enabled: _charge == null,
             decoration: const InputDecoration(
-              labelText: 'Valor (R$)',
+              labelText: 'Valor (R\$)',
               prefixIcon: Icon(Icons.attach_money_outlined),
             ),
           ),

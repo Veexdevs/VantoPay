@@ -29,7 +29,8 @@ class _PayScreenState extends State<PayScreen> {
 
   Future<void> _load() async {
     try {
-      setState(() => _statuses = await AccountService.instance.integrations());
+      final statuses = await AccountService.instance.integrations();
+      setState(() => _statuses = statuses);
     } catch (_) {
       // ignore — show default notice
     }
@@ -64,7 +65,7 @@ class _PayScreenState extends State<PayScreen> {
           const SizedBox(height: 12),
           TextField(
             decoration: const InputDecoration(
-              labelText: 'Valor (R$)',
+              labelText: 'Valor (R\$)',
               prefixIcon: Icon(Icons.attach_money_outlined),
             ),
             keyboardType: const TextInputType.numberWithOptions(decimal: true),

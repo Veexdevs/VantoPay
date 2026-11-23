@@ -24,6 +24,10 @@ class AppConfig {
   static const String googleClientId =
       String.fromEnvironment('GOOGLE_CLIENT_ID', defaultValue: '');
 
+  /// Web OAuth redirect target (must be registered in Supabase Auth URLs).
+  static const String webRedirectUri =
+      String.fromEnvironment('WEB_REDIRECT_URI', defaultValue: '');
+
   /// Official VantoPay logo assets.
   static const String logoAsset = 'assets/logos/official_1.png';
   static const List<String> logoAssets = [

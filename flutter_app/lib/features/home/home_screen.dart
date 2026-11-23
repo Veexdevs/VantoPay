@@ -260,7 +260,7 @@ class _HomeScreenState extends State<HomeScreen> {
       case 'deposit':
         return Icons.account_balance_wallet_outlined;
       default:
-        return Icons.money_outstanding_outlined;
+        return Icons.account_balance_wallet_outlined;
     }
   }
 
@@ -315,6 +315,7 @@ class _QuickActionGrid extends StatelessWidget {
     final foreground =
         isDark ? VantoPayTheme.paper : VantoPayTheme.ink;
     return GridView.count(
+      crossAxisCount: 2,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       crossAxisSpacing: 24,

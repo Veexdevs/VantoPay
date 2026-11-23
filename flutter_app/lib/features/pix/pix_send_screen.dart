@@ -131,7 +131,7 @@ class _PixSendScreenState extends State<PixSendScreen> {
               children: [
                 DropdownButtonFormField<String>(
                   value: _keyCtrl.text.isEmpty ? null : _keyCtrl.text,
-                  hintText: 'Selecione uma chave',
+                  hint: const Text('Selecione uma chave'),
                   items: _keys.map((k) => DropdownMenuItem(
                           value: k.keyValue, child: Text(k.keyValue))).toList(),
                   onChanged: (v) => _keyCtrl.text = v ?? '',
@@ -162,7 +162,7 @@ class _PixSendScreenState extends State<PixSendScreen> {
             keyboardType:
                 const TextInputType.numberWithOptions(decimal: true),
             decoration: const InputDecoration(
-              labelText: 'Valor (R$)',
+              labelText: 'Valor (R\$)',
               prefixIcon: Icon(Icons.attach_money_outlined),
             ),
           ),
