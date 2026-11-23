@@ -48,7 +48,7 @@ class VantoPayTheme {
         titleTextStyle: TextStyle(
             color: paper, fontSize: 18, fontWeight: FontWeight.w600),
       ),
-      cardTheme: CardThemeData(
+      cardTheme: CardTheme(
         color: surface,
         elevation: 0,
         margin: EdgeInsets.zero,
@@ -133,7 +133,7 @@ class VantoPayTheme {
         titleTextStyle: TextStyle(
             color: ink, fontSize: 18, fontWeight: FontWeight.w600),
       ),
-      cardTheme: CardThemeData(
+      cardTheme: CardTheme(
         color: paper,
         elevation: 0,
         margin: EdgeInsets.zero,
