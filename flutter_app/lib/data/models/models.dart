@@ -65,7 +65,7 @@ class Balance {
 
   factory Balance.fromJson(Map<String, dynamic> json) => Balance(
         accountId: json['account_id']?.toString() ?? '',
-        amount: Decimal(json['balance']?.toString() ?? '0'),
+        amount: Decimal.parse(json['balance']?.toString() ?? '0'),
         currency: json['currency']?.toString() ?? 'BRL',
       );
 }
@@ -103,7 +103,7 @@ class Transaction {
         id: json['id']?.toString() ?? '',
         kind: json['kind']?.toString() ?? '',
         direction: json['direction']?.toString() ?? '',
-        amount: Decimal(json['amount']?.toString() ?? '0'),
+        amount: Decimal.parse(json['amount']?.toString() ?? '0'),
         currency: json['currency']?.toString() ?? 'BRL',
         status: json['status']?.toString() ?? '',
         counterpartyName: json['counterparty_name']?.toString(),
@@ -139,11 +139,11 @@ class StatementEntry {
   factory StatementEntry.fromJson(Map<String, dynamic> json) => StatementEntry(
         id: json['id']?.toString() ?? '',
         entryType: json['entry_type']?.toString() ?? '',
-        amount: Decimal(json['amount']?.toString() ?? '0'),
+        amount: Decimal.parse(json['amount']?.toString() ?? '0'),
         currency: json['currency']?.toString() ?? 'BRL',
         description: json['description']?.toString() ?? '',
         reference: json['reference']?.toString(),
-        balanceAfter: Decimal(json['balance_after']?.toString() ?? '0'),
+        balanceAfter: Decimal.parse(json['balance_after']?.toString() ?? '0'),
         createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '') ??
             DateTime.now(),
       );
@@ -191,7 +191,7 @@ class PixCharge {
         id: json['id']?.toString() ?? '',
         kind: json['kind']?.toString() ?? '',
         keyValue: json['key_value']?.toString() ?? '',
-        amount: Decimal(json['amount']?.toString() ?? '0'),
+        amount: Decimal.parse(json['amount']?.toString() ?? '0'),
         status: json['status']?.toString() ?? '',
         qrCodePayload: json['qr_code_payload']?.toString(),
         createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '') ??
