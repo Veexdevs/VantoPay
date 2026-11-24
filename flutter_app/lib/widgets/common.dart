@@ -296,7 +296,7 @@ class ErrorBanner extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF1A1A1A),
         borderRadius: BorderRadius.circular(14),
-        border: const Border.all(color: VantoPayTheme.line),
+        border: Border.all(color: VantoPayTheme.line),
       ),
       child: Row(children: [
         const Icon(Icons.warning_amber_outlined, size: 20),

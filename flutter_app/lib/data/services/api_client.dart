@@ -20,9 +20,9 @@ class ApiClient {
     final base = AppConfig.apiBaseUrl.replaceAll(RegExp(r'/$'), '');
     final uri = Uri.parse('$base$path');
     if (query == null || query.isEmpty) return uri;
-    final qs = query
-        .map((k, v) =>
-            '${Uri.encodeQueryComponent(k)}=${Uri.encodeQueryComponent(v.toString())}')
+    final qs = query.entries
+        .map((e) =>
+            '${Uri.encodeQueryComponent(e.key)}=${Uri.encodeQueryComponent(e.value.toString())}')
         .join('&');
     return uri.replace(query: qs);
   }
