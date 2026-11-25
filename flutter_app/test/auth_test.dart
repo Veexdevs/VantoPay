@@ -75,6 +75,9 @@ void main() {
     expect(find.text('Entrar'), findsOneWidget);
     expect(find.text('Criar Conta'), findsOneWidget);
     expect(find.text('Entrar com Google'), findsOneWidget);
+    expect(find.text('Pagamentos mais simples. Sempre.'), findsNothing);
+    // Only the two lines around "ou" remain; no decorative footer line.
+    expect(find.byType(Divider), findsNWidgets(2));
     final image = tester.widget<Image>(find.byType(Image));
     expect((image.image as AssetImage).assetName, 'assets/brand/logo.png');
     expect(tester.takeException(), isNull);

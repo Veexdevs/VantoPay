@@ -304,17 +304,6 @@ class _AuthPageState extends State<AuthPage> {
                                 },
                               ),
                             ),
-                            SizedBox(height: welcome ? 38 : 28),
-                            const MotionReveal(
-                              delay: 330,
-                              child: Column(children: [
-                                SizedBox(width: 22, child: Divider(color: Color(0xFF343439))),
-                                SizedBox(height: 10),
-                                Text('Pagamentos mais simples. Sempre.',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(color: muted, fontSize: 11.5, letterSpacing: 0.1)),
-                              ]),
-                            ),
                           ],
                         ),
                       ),
