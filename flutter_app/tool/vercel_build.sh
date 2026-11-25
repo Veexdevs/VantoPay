@@ -8,6 +8,6 @@ npm test
 : "${SUPABASE_ANON_KEY:?Configure SUPABASE_ANON_KEY na Vercel}"
 flutter/bin/flutter analyze lib test
 flutter/bin/flutter test --reporter expanded
-flutter/bin/flutter build web --release --no-web-resources-cdn \
+flutter/bin/flutter build web --release --no-web-resources-cdn --pwa-strategy=none \
   --dart-define="SUPABASE_URL=$SUPABASE_URL" \
   --dart-define="SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY"

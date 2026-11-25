@@ -27,6 +27,29 @@
 <body>
   <div id="loading" role="status"><span>Carregando VantoPay…</span></div>
   <script>window.addEventListener('flutter-first-frame',()=>document.getElementById('loading')?.remove());</script>
-  <script src="flutter_bootstrap.js" async></script>
+  <script>
+    // Authentication must not run a stale offline bundle after a deployment.
+    // Remove only Flutter's legacy worker/cache; never clear cookies or auth storage.
+    (async () => {
+      try {
+        if ('serviceWorker' in navigator) {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          for (const registration of registrations) {
+            const worker = registration.active || registration.waiting || registration.installing;
+            if (worker && new URL(worker.scriptURL).pathname.endsWith('/flutter_service_worker.js')) {
+              await registration.unregister();
+            }
+          }
+        }
+        if ('caches' in window) {
+          await Promise.all(['flutter-app-cache', 'flutter-temp-cache', 'flutter-app-manifest']
+            .map(name => caches.delete(name)));
+        }
+      } catch (_) { /* Restricted storage must not prevent the app from starting. */ }
+      const bootstrap = document.createElement('script');
+      bootstrap.src = 'flutter_bootstrap.js';
+      document.body.appendChild(bootstrap);
+    })();
+  </script>
 </body>
 </html>

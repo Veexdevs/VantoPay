@@ -22,15 +22,21 @@ try {
   await page.locator('flt-semantics-placeholder').evaluate(el => el.click(), { timeout: 20000 });
   stage = 'open_signup';
   await page.getByRole('button', { name: 'Criar Conta', exact: true }).click({ timeout: 15000 });
+  const type = async (name, value) => {
+    await page.getByRole('textbox', { name, exact: true }).click();
+    // Flutter's semantic textbox is a proxy, not the editing element. Send
+    // real keyboard events after focus rather than modifying its DOM value.
+    await page.keyboard.type(value, { delay: 25 });
+  };
   stage = 'fill_signup';
-  await page.getByRole('textbox', { name: 'Nome de exibição' }).fill('Browser Test');
-  await page.getByRole('textbox', { name: 'E-mail', exact: true }).fill('browser-test@example.invalid');
-  await page.getByRole('textbox', { name: 'Senha', exact: true }).fill('TestPassword123!');
+  await type('Nome de exibição', 'Browser Test');
+  await type('E-mail', 'browser-test@example.invalid');
+  await type('Senha', 'TestPassword123!');
   stage = 'submit_signup';
   await page.getByRole('button', { name: 'Criar conta', exact: true }).click();
   await page.getByRole('textbox', { name: 'Código de verificação' }).waitFor({ timeout: 15000 });
   stage = 'submit_code';
-  await page.getByRole('textbox', { name: 'Código de verificação' }).fill('123456');
+  await type('Código de verificação', '123456');
   await page.getByRole('button', { name: 'Verificar e-mail' }).click();
   await page.getByRole('button', { name: 'Sair da conta' }).waitFor({ timeout: 15000 });
   console.log('AUTH_BROWSER', JSON.stringify({ ok: true, actions }));
@@ -38,5 +44,5 @@ try {
   console.log('AUTH_BROWSER', JSON.stringify({ ok: false, stage, type: error.name }));
   // Print only visible semantic labels, never user data or request bodies.
   const page = browser?.contexts()[0]?.pages()[0];
-  if (page) console.log('AUTH_BROWSER_LABELS', JSON.stringify(await page.locator('flt-semantics').allTextContents().catch(() => [])));
+  if (page) console.log('AUTH_BROWSER_LABELS', JSON.stringify((await page.locator('flt-semantics').allTextContents().catch(() => [])).slice(-15)));
 } finally { await browser?.close(); }
