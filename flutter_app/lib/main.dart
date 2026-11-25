@@ -106,6 +106,9 @@ class _AuthPageState extends State<AuthPage> {
     super.initState();
     if (widget.auth?.isSignedIn ?? false) {
       step = AccessStep.account;
+    } else if (widget.auth?.needsVerification ?? false) {
+      step = AccessStep.verify;
+      email.text = widget.auth?.email ?? '';
     }
     subscription = widget.auth?.sessionChanges.listen((signedIn) {
       if (!mounted) {
@@ -121,10 +124,21 @@ class _AuthPageState extends State<AuthPage> {
           code.clear();
           error = null;
           notice = null;
+        } else if (widget.auth?.needsVerification ?? false) {
+          email.text = widget.auth?.email ?? email.text;
+          step = AccessStep.verify;
+          password.clear();
         } else if (step == AccessStep.account) {
           step = AccessStep.welcome;
         }
       });
+      if (!signedIn && (widget.auth?.needsVerification ?? false) && resendIn == 0) {
+        startCooldown();
+      }
+    }, onError: (Object failure) {
+      if (mounted) {
+        setState(() => error = friendlyAuthError(failure));
+      }
     });
   }
 
@@ -199,8 +213,10 @@ class _AuthPageState extends State<AuthPage> {
       switch (step) {
         case AccessStep.login:
           await auth.signIn(email.text.trim(), password.text);
-          if (mounted && auth.isSignedIn) {
-            setState(() => step = AccessStep.account);
+          if (mounted) {
+            password.clear();
+            setState(() => step = auth.isSignedIn ? AccessStep.account : AccessStep.verify);
+            if (!auth.isSignedIn) { startCooldown(); }
           }
           break;
         case AccessStep.signup:
@@ -398,7 +414,7 @@ class _AuthPageState extends State<AuthPage> {
         if (verify) ...[
           const Icon(Icons.mark_email_read_outlined, size: 34, color: Colors.white),
           const SizedBox(height: 20),
-          const Text('Use o código recebido ou abra o link de confirmação no e-mail.',
+          const Text('Digite o código de 6 dígitos enviado por e-mail. Ele expira em 5 minutos.',
             textAlign: TextAlign.center, style: TextStyle(color: muted, height: 1.5, fontSize: 14)),
           const SizedBox(height: 20),
           TextFormField(
@@ -410,8 +426,8 @@ class _AuthPageState extends State<AuthPage> {
             keyboardType: TextInputType.number,
             textInputAction: TextInputAction.done,
             autofillHints: const [AutofillHints.oneTimeCode],
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(8)],
-            validator: (value) => RegExp(r'^\d{6,8}$').hasMatch(value ?? '') ? null : 'Digite o código de 6 a 8 dígitos.',
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(6)],
+            validator: (value) => RegExp(r'^\d{6}$').hasMatch(value ?? '') ? null : 'Digite o código de 6 dígitos.',
             onFieldSubmitted: (_) => busy ? null : submit(),
           ),
         ] else ...[
@@ -420,11 +436,11 @@ class _AuthPageState extends State<AuthPage> {
             onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
             style: const TextStyle(fontSize: 14),
               controller: name, enabled: !busy,
-              decoration: const InputDecoration(labelText: 'Nome completo', prefixIcon: Icon(Icons.person_outline_rounded, color: Colors.white)),
+              decoration: const InputDecoration(labelText: 'Nome de exibição', prefixIcon: Icon(Icons.person_outline_rounded, color: Colors.white)),
               textCapitalization: TextCapitalization.words,
-              autofillHints: const [AutofillHints.name],
+              autofillHints: const [AutofillHints.nickname],
               textInputAction: TextInputAction.next,
-              validator: (value) => (value?.trim().length ?? 0) < 3 ? 'Informe seu nome completo.' : null,
+              validator: (value) => (value?.trim().length ?? 0) < 3 ? 'Informe seu nome de exibição.' : null,
             ),
             const SizedBox(height: 16),
           ],

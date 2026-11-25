@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+npm test
 : "${SUPABASE_URL:?Configure SUPABASE_URL na Vercel}"
 : "${SUPABASE_ANON_KEY:?Configure SUPABASE_ANON_KEY na Vercel}"
 flutter/bin/flutter analyze lib test

@@ -1,33 +1,50 @@
-# Ativação da autenticação
+# Autenticação VantoPay
 
-## Remetente profissional e códigos
+## Arquitetura
 
-Serviço recomendado: **Resend — https://resend.com**.
+A interface continua em Dart/Flutter. `/api/auth` é uma função **server-side Node na Vercel**, necessária para usar SMTP e credenciais administrativas sem incluí-las no bundle Flutter.
 
-Para enviar como `VantoPay <verificacao@seu-dominio.com>`, você precisa controlar um domínio e validar os registros DNS pedidos pelo serviço (SPF/DKIM e, preferencialmente, DMARC). O subdomínio `vantopay.vercel.app` pertence à Vercel e não serve como domínio de e-mail próprio. Não basta informar um Gmail para transformá-lo em um endereço empresarial.
+- E-mail/senha: o servidor autentica com Supabase. Cadastro usa `display_name` e não confirma a conta antes do código.
+- Cadastro e primeiro acesso em um navegador: o servidor envia automaticamente um código pelo Gmail `vantopay.app@gmail.com`, host `smtp.gmail.com`, porta **587**, **STARTTLS obrigatório**, TLS >= 1.2 e validação de certificado.
+- Código criptograficamente aleatório (`crypto.randomInt`), exatamente **6 dígitos**, válido por **5 minutos**. Banco guarda apenas HMAC com segredo server-side. Cinco tentativas; consumo e contagem atômicos com bloqueio de linha. Reenvio invalida códigos anteriores; intervalo mínimo de 60 segundos e máximo de 10 envios/hora/usuário. Limites adicionais de IP e e-mail persistem no banco, não na memória da função.
+- Sessão pendente não concede sessão VantoPay. Somente após confirmação o servidor cria o cookie de sessão e registra um dispositivo confiável. Cookies `__Host-`, `Secure`, `HttpOnly`, `SameSite=Strict`; sessão/continuação criptografadas e autenticadas com AES-256-GCM.
+- Dispositivo significa este perfil de navegador, identificado por token aleatório de 256 bits em cookie, com validade de **30 dias**. Banco guarda só o hash. Novo navegador, janela anônima, limpeza de cookies ou expiração exigem novo código. Não se usa fingerprint nem um booleano de localStorage.
+- Entrada com Google também passa pela confirmação do dispositivo. Tokens do retorno OAuth são trocados por sessão server-side independente; o SDK limpa a sessão OAuth local depois da troca. E-mail/senha nunca retornam tokens Supabase ao Flutter.
+- O servidor revalida sessão Supabase e dispositivo no restabelecimento. Mutações exigem origem HTTPS exata e JSON; não há CORS aberto. Respostas não são cacheadas; erros não registram códigos, tokens ou senhas.
 
-1. Crie sua conta no Resend, adicione um domínio seu e valide o DNS.
-2. Crie uma chave com permissão de envio. Guarde-a somente no painel seguro do provedor/Supabase, nunca no Flutter, Git ou chat.
-3. No Supabase do projeto usado pelo VantoPay: **Authentication → Email / SMTP Settings → Custom SMTP**.
-4. Configure o SMTP conforme as instruções atuais do Resend (normalmente host `smtp.resend.com`, usuário `resend`, senha = chave da API, porta TLS recomendada pelo provedor), nome `VantoPay` e remetente do domínio validado.
-5. Em **Authentication → Email Templates → Confirm signup**, substitua o conteúdo pelo arquivo `confirmation-email.html`. O campo `{{ .Token }}` insere o código real do Supabase; não gere códigos no frontend. Sugestão de assunto: `Seu código de verificação VantoPay`.
-6. Mantenha **Confirm email** ativado. A interface aceita códigos de 6 a 8 dígitos; o projeto consultado está configurado para 8 dígitos.
-7. Teste com uma conta nova: cadastro → receber código → digitar → sessão autenticada. Teste código inválido/expirado e reenvio. Não use contas reais para testes automatizados.
+**Regra para novas funcionalidades protegidas:** passar pelo backend e exigir sessão + dispositivo verificados, como no fluxo `status`. Não autorizar acesso só com um JWT Supabase ou com o estado visual Flutter. Este projeto compartilha o Supabase com outro app: essa verificação é do VantoPay, não uma política global de MFA do Supabase. Ainda não existem endpoints financeiros/dados privados neste app. Não reutilizar a service role para consultas sem autorização por usuário.
 
-O template inclui também o link oficial do Supabase. A confirmação abre o site e o SDK recupera a sessão. Na configuração padrão, sem SMTP personalizado, o Supabase restringe destinatários e frequência; erro de envio não significa defeito no formulário.
+## Variáveis do servidor
 
-## Entrar com Google
+Configurar pelo painel seguro da Vercel (nunca no Git/chat):
 
-1. Abra https://console.cloud.google.com/ e selecione/crie um projeto Google Cloud.
-2. Configure a tela de consentimento OAuth com nome VantoPay e e-mail de suporte. Em modo de teste, adicione os usuários de teste; para acesso geral, publique conforme os requisitos do Google.
-3. Crie uma credencial **OAuth Client ID → Web application**.
-4. Copie a URL de callback mostrada em **Supabase → Authentication → Sign In / Providers → Google**. Use exatamente essa URL como **Authorized redirect URI** no Google. Ela é `https://<project-ref>.supabase.co/auth/v1/callback`, não o endereço da página Flutter.
-5. Coloque Client ID e Client Secret **somente no painel Supabase** e habilite o provedor Google. O segredo não deve entrar no código Flutter.
-6. Em **Authentication → URL Configuration**, mantenha a URL de produção `https://vantopay.vercel.app` e inclua as origens exatas dos previews que quiser testar em **Redirect URLs**. Não use curingas amplos em produção.
-7. Teste entrada, cancelamento, retorno ao mesmo deployment, recarregamento da página e saída.
+- `SUPABASE_URL` e `SUPABASE_ANON_KEY`: também usados pelo Flutter, são públicos.
+- `SUPABASE_SERVICE_ROLE_KEY`: servidor apenas.
+- `SMTP_USER`: conta Gmail remetente.
+- `SMTP_PASS`: senha de aplicativo Gmail (não a senha normal da conta).
+- `OTP_PEPPER`: segredo aleatório >= 32 bytes; usado em HMAC e derivação da chave dos cookies. Rotacionar encerra sessões, desafios e confiança anteriores.
 
-## Observações do projeto existente
+O build só passa URL/chave pública ao Dart. Os outros valores nunca devem virar `--dart-define`. A senha enviada em conversa deve ser revogada/regenerada e substituída na variável protegida após a configuração. O Gmail precisa ter verificação em duas etapas e permitir senhas de aplicativo. Quotas, bloqueios do Gmail e entrega/spam precisam ser validados com uma caixa real; testes automatizados não enviam mensagens reais.
 
-A Vercel já possui `SUPABASE_URL` e `SUPABASE_ANON_KEY`. O projeto Supabase associado tem outro nome no painel e pode ser compartilhado com outro app. Por isso, não foram alterados templates, SMTP, credenciais nem políticas globais automaticamente. Confira o projeto antes de modificar essas opções.
+A migração `supabase/migrations/202611250001_vantopay_email_verification.sql` foi aplicada no projeto associado. Tabelas/RPCs são namespaced, com RLS e sem permissões para `anon`/`authenticated`. Não alteramos SMTP, templates ou configurações globais do Supabase compartilhado. O template legado `confirmation-email.html` não é usado neste fluxo; o e-mail vem da função.
 
-No momento da consulta, Google estava desativado e SMTP personalizado não estava configurado. A integração de frontend não substitui essas configurações externas.
+Manutenção: excluir periodicamente desafios com `created_at < now() - interval '2 days'`, limites com `expires_at < now()` e dispositivos expirados. Conservar desafios recentes para que os limites de envio permaneçam corretos. Não expor essas operações ao cliente.
+
+## Google: configuração externa pendente
+
+O provedor foi encontrado **desativado** e sem Client ID/Secret. A senha SMTP **não** é uma credencial OAuth.
+
+1. No Google Cloud, configurar consentimento OAuth e criar **OAuth Client ID → Web application**.
+2. Cadastrar a URI autorizada de retorno: `https://dyjmzvbrfisslkzsbbsd.supabase.co/auth/v1/callback`.
+3. Em Supabase → Authentication → Sign In / Providers → Google, inserir Client ID e Client Secret pelo painel seguro e habilitar o provedor. Nunca incluir Client Secret no Flutter ou enviar por chat.
+4. Em URL Configuration, manter `https://vantopay.vercel.app` e autorizar as URLs exatas de preview usadas nos testes. Não usar curingas amplos em produção.
+5. Testar login Google → código por e-mail → conta; repetir em navegador novo. Em modo de teste do Google, incluir os usuários de teste autorizados.
+
+A integração está implementada, mas não pode funcionar até essas credenciais externas serem configuradas. A interface informa indisponibilidade sem levar o usuário a uma página de erro crua.
+
+## Validação
+
+- `cd flutter_app && npm ci && npm test`: testes de geração de código, HMAC, cookies adulterados/expirados, CSRF e fluxos backend com provedores simulados.
+- `flutter analyze lib test` e `flutter test`: validação Flutter, inclusive login aguardando OTP, formato de 6 dígitos, nome de exibição, teclado e motion. Executados também antes de cada build Vercel.
+- `supabase/tests/vantopay_email_verification.sql`: testes reais transacionais de SQL (limite de tentativas, expiração, cooldown, uso único e permissões). Todas as linhas de teste são revertidas; não usa contas reais.
+- Aceite manual obrigatório: receber um código real pelo Gmail, confirmar, testar código incorreto/expirado, reenvio, recarregar, sair/entrar no mesmo navegador e entrar em janela anônima. Validar Google após ativação. Ambiente de desenvolvimento Flutter isolado não contém a função; usar deployment HTTPS Vercel para o fluxo integrado.
