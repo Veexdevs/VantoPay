@@ -99,6 +99,7 @@ void main() {
     await mountAuth(tester);
     await tester.enterText(find.byType(TextFormField).first, 'teste@example.com');
     final originalHeight = tester.getSize(find.byKey(scrollKey)).height;
+    final originalMaxExtent = controller(tester).position.maxScrollExtent;
     for (var i = 0; i < 2; i++) {
       // Mobile browsers can resize the layout viewport rather than send insets.
       tester.view.physicalSize = const Size(440, 460);
@@ -107,7 +108,11 @@ void main() {
       tester.view.physicalSize = const Size(440, 800);
       await tester.pumpAndSettle();
       expect(tester.getSize(find.byKey(scrollKey)).height, originalHeight);
-      expect(controller(tester).offset, closeTo(0, 0.5));
+      final position = controller(tester).position;
+      // A valid form can be taller than the screen. Restoring a browser resize
+      // must restore its actual range, not assume every form has zero scroll.
+      expect(position.maxScrollExtent, closeTo(originalMaxExtent, 0.5));
+      expect(position.pixels, inInclusiveRange(position.minScrollExtent, position.maxScrollExtent));
       expect(tester.takeException(), isNull);
     }
     expect(tester.widget<TextFormField>(find.byType(TextFormField).first).controller!.text,
