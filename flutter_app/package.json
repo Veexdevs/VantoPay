@@ -11,5 +11,9 @@
   },
   "engines": {
     "node": "22.x"
+  },
+  "devDependencies": {
+    "@sparticuz/chromium": "143.0.4",
+    "playwright-core": "1.57.0"
   }
 }

@@ -48,3 +48,14 @@ A integração está implementada, mas não pode funcionar até essas credenciai
 - `flutter analyze lib test` e `flutter test`: validação Flutter, inclusive login aguardando OTP, formato de 6 dígitos, nome de exibição, teclado e motion. Executados também antes de cada build Vercel.
 - `supabase/tests/vantopay_email_verification.sql`: testes reais transacionais de SQL (limite de tentativas, expiração, cooldown, uso único e permissões). Todas as linhas de teste são revertidas; não usa contas reais.
 - Aceite manual obrigatório: receber um código real pelo Gmail, confirmar, testar código incorreto/expirado, reenvio, recarregar, sair/entrar no mesmo navegador e entrar em janela anônima. Validar Google após ativação. Ambiente de desenvolvimento Flutter isolado não contém a função; usar deployment HTTPS Vercel para o fluxo integrado.
+
+## Correções de retomada e confiança
+
+- A confiança agora usa um cookie HttpOnly separado por ID de conta (com compatibilidade para o cookie antigo). Verificar B não apaga a confiança já estabelecida de A no mesmo navegador. Sair encerra a sessão, mas preserva a confiança; trocar de navegador exige prova novamente. A validade de segurança permanece 30 dias.
+- O cliente aguarda a restauração inicial e descarta respostas de bootstrap atrasadas, para não substituir o estado de um login/cadastro mais recente.
+- Falhas reais de criação não simulam envio de código; conta já cadastrada orienta a entrar. Falha de envio mantém a tela de código e a opção de reenvio.
+- O bundle de autenticação não usa cache offline Flutter; a inicialização remove somente o worker/cache legado, sem apagar cookies ou armazenamento de autenticação.
+- Diagnóstico remoto confirmou resposta 200 de `status`, acesso administrativo e ao banco e autenticação Gmail SMTP. Isso não comprova entrega em caixa de entrada nem ativação Google (ainda sem credenciais).
+- `node tool/auth_diagnostics.mjs`: somente conexões/leituras; não envia mensagens.
+- `node tool/auth_integration.mjs`: usa uma conta descartável `example.invalid`, transporte de e-mail em memória e Supabase real; valida cadastro, confirmação, restauração e novo login sem novo código. Remove a conta em `finally`. Executar somente em ambiente protegido com variáveis do servidor, não em testes offline.
+- `node tool/auth_browser_smoke.mjs`: navegador real no site de produção com mutações de autenticação interceptadas (não cadastra contas nem envia e-mails). Separa teste da UI de entrega SMTP.

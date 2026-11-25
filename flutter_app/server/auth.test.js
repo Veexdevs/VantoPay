@@ -1,12 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHandler } from '../api/auth.js';
-import { seal, unseal, digest } from './security.js';
+import { seal, unseal } from './security.js';
 process.env.OTP_PEPPER = 'test-only-secret';
 process.env.SMTP_USER = 'test@example.com';
 
-function fixture({ trust = false, accept = true, smtpFails = false } = {}) {
-  const calls = [], messages = [], challenges = new Map();
+function fixture({ trust = false, accept = true, smtpFails = false, createError } = {}) {
+  const calls = [], messages = [], challenges = new Map(), devices = new Map();
   const user = { id: 'user-1', email: 'person@example.com', email_confirmed_at: '2026-11-25' };
   const session = { access_token: 'private-access', refresh_token: 'private-refresh' };
   const ok = data => ({ data });
@@ -15,7 +15,7 @@ function fixture({ trust = false, accept = true, smtpFails = false } = {}) {
     setSession: async () => ok({ user, session }),
     getUser: async () => ok({ user }), verifyOtp: async () => ok({ user, session }),
     admin: {
-      createUser: async data => { calls.push(['create', data]); return ok({ user }); },
+      createUser: async data => { calls.push(['create', data]); return createError ? { error: createError } : ok({ user }); },
       updateUserById: async () => ok({ user }),
       generateLink: async () => ok({ properties: { hashed_token: 'internal-link' } }),
       signOut: async () => ok({}),
@@ -36,8 +36,10 @@ function fixture({ trust = false, accept = true, smtpFails = false } = {}) {
       return ok(null);
     },
     from: () => {
-      const builder = { select: () => builder, eq: () => builder, gt: async () => ok(trust ? [{ user_id: user.id }] : []),
-        insert: async data => { calls.push(['insert', data]); return ok({}); } };
+      const filters = {};
+      const builder = { select: () => builder, eq: (key, value) => { filters[key] = value; return builder; },
+        gt: async () => ok(trust || devices.get(filters.token_hash) === filters.user_id ? [{ user_id: user.id }] : []),
+        insert: async data => { calls.push(['insert', data]); devices.set(data.token_hash, data.user_id); return ok({}); } };
       return builder;
     },
   };
@@ -62,7 +64,7 @@ test('signup sends Gmail code, saves display_name, never returns tokens', async 
   assert.equal(r.statusCode, 200); assert.equal(r.body.verified, false); assert.equal(r.body.pending, true);
   assert.equal(f.calls.find(c => c[0] === 'create')[1].user_metadata.display_name, 'Pessoa');
   assert.match(f.messages[0].text, /\b\d{6}\b/);
-  assert.equal(f.jar.__Host_vp_session, undefined);
+  assert.equal(f.jar['__Host-vp_session'], '');
   assert.ok(!JSON.stringify(r.body).includes('private'));
   assert.match(r.headers['Set-Cookie'][0], /HttpOnly; Secure; SameSite=Strict/);
 });
@@ -75,7 +77,7 @@ test('password login on new device cannot create verified session until correct 
   const code = f.messages[0].text.match(/\b\d{6}\b/)[0];
   const verified = await f.request({ action: 'verify', code });
   assert.equal(verified.body.verified, true);
-  assert.ok(f.jar['__Host-vp_device']); assert.ok(unseal(f.jar['__Host-vp_session']));
+  assert.ok(f.jar[`__Host-vp_device_${f.user.id}`]); assert.ok(unseal(f.jar['__Host-vp_session']));
   const replay = await f.request({ action: 'verify', code });
   assert.equal(replay.body.code, 'otp_expired');
 });
@@ -111,4 +113,38 @@ test('cross-origin request is rejected before touching backend', async () => {
 test('a copied session without trusted-device token cannot restore access', async () => {
   const f = fixture(); f.jar['__Host-vp_session'] = seal({ uid: f.user.id, access: 'private', refresh: 'private' }, 300);
   assert.equal((await f.request({ action: 'status' })).body.verified, false);
+});
+
+test('database signup failure is not disguised as a phantom email challenge', async () => {
+  const f = fixture({ createError: { code: 'unexpected_failure', status: 500 } });
+  const r = await f.request({ action: 'signup', email: f.user.email, display_name: 'Pessoa', password: 'password123' });
+  assert.equal(r.statusCode, 503);
+  assert.equal(r.body.code, 'service_unavailable');
+  assert.equal(r.body.pending, undefined);
+  assert.equal(f.messages.length, 0);
+  assert.equal(f.jar['__Host-vp_pending'], undefined);
+});
+test('existing confirmed account gets an actionable error, not a nonexistent code', async () => {
+  const f = fixture({ createError: { code: 'email_exists', status: 422 } });
+  const r = await f.request({ action: 'signup', email: f.user.email, display_name: 'Pessoa', password: 'password123' });
+  assert.equal(r.body.code, 'signup_unavailable');
+  assert.equal(r.body.pending, undefined);
+  assert.equal(f.messages.length, 0);
+});
+test('verified account stays trusted after logout and switching verified accounts', async () => {
+  const f = fixture();
+  for (const id of ['account-a', 'account-b']) {
+    f.user.id = id; f.user.email = `${id}@example.com`;
+    assert.equal((await f.request({ action: 'login', email: f.user.email, password: 'password123' })).body.pending, true);
+    const code = f.messages.at(-1).text.match(/\b\d{6}\b/)[0];
+    assert.equal((await f.request({ action: 'verify', code })).body.verified, true);
+    await f.request({ action: 'logout' });
+  }
+  assert.ok(f.jar['__Host-vp_device_account-a']); assert.ok(f.jar['__Host-vp_device_account-b']);
+  f.user.id = 'account-a'; f.user.email = 'account-a@example.com';
+  assert.equal((await f.request({ action: 'login', email: f.user.email, password: 'password123' })).body.verified, true);
+  assert.equal(f.messages.length, 2);
+  // Same account in another browser still requires proof.
+  delete f.jar['__Host-vp_device_account-a'];
+  assert.equal((await f.request({ action: 'login', email: f.user.email, password: 'password123' })).body.pending, true);
 });
