@@ -1,0 +1,16 @@
+.venv/
+.DS_Store
+.env
+.env.*
+!.env.example
+.dart_tool/
+.packages
+.pub-cache/
+.flutter-plugins
+.flutter-plugins-dependencies
+build/
+coverage/
+flutter_app/flutter/
+flutter_app/.metadata
+.vercel/
+node_modules/
