@@ -17,7 +17,7 @@ Future<void> main() async {
   if (url.isNotEmpty && key.isNotEmpty) {
     try {
       await Supabase.initialize(url: url, anonKey: key);
-      auth = SupabaseAuthService(Supabase.instance.client);
+      auth = SupabaseAuthService(Supabase.instance.client, url: url, publicKey: key);
     } catch (_) {
       // The interface stays usable and reports a configuration error on submit.
     }
@@ -101,9 +101,13 @@ class _AuthPageState extends State<AuthPage> {
   @override
   void initState() {
     super.initState();
-    if (widget.auth?.isSignedIn ?? false) step = AccessStep.account;
+    if (widget.auth?.isSignedIn ?? false) {
+      step = AccessStep.account;
+    }
     subscription = widget.auth?.sessionChanges.listen((signedIn) {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       setState(() {
         if (signedIn) {
           step = AccessStep.account;
@@ -129,7 +133,9 @@ class _AuthPageState extends State<AuthPage> {
   }
 
   void go(AccessStep next) {
-    if (busy) return;
+    if (busy) {
+      return;
+    }
     setState(() {
       step = next;
       error = null;
@@ -144,14 +150,20 @@ class _AuthPageState extends State<AuthPage> {
     resendTimer?.cancel();
     setState(() => resendIn = 60);
     resendTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (!mounted) return timer.cancel();
+      if (!mounted) {
+        return timer.cancel();
+      }
       setState(() => resendIn--);
-      if (resendIn <= 0) timer.cancel();
+      if (resendIn <= 0) {
+        timer.cancel();
+      }
     });
   }
 
   Future<void> perform(Future<void> Function(AuthService) action) async {
-    if (busy) return;
+    if (busy) {
+      return;
+    }
     setState(() { busy = true; error = null; notice = null; });
     try {
       final auth = widget.auth;
@@ -161,31 +173,43 @@ class _AuthPageState extends State<AuthPage> {
       }
       await action(auth);
     } catch (e) {
-      if (mounted) setState(() => error = friendlyAuthError(e));
+      if (mounted) {
+        setState(() => error = friendlyAuthError(e));
+      }
     } finally {
-      if (mounted) setState(() => busy = false);
+      if (mounted) {
+        setState(() => busy = false);
+      }
     }
   }
 
   Future<void> submit() async {
-    if (!(formKey.currentState?.validate() ?? false)) return;
+    if (!(formKey.currentState?.validate() ?? false)) {
+      return;
+    }
     FocusScope.of(context).unfocus();
     await perform((auth) async {
       switch (step) {
         case AccessStep.login:
           await auth.signIn(email.text.trim(), password.text);
-          if (mounted && auth.isSignedIn) setState(() => step = AccessStep.account);
+          if (mounted && auth.isSignedIn) {
+            setState(() => step = AccessStep.account);
+          }
           break;
         case AccessStep.signup:
           final signedIn = await auth.signUp(name.text.trim(), email.text.trim(), password.text);
-          if (!mounted) return;
+          if (!mounted) {
+            return;
+          }
           password.clear();
           setState(() => step = signedIn ? AccessStep.account : AccessStep.verify);
           if (!signedIn) startCooldown();
           break;
         case AccessStep.verify:
           await auth.verifyEmail(email.text.trim(), code.text.trim());
-          if (mounted && auth.isSignedIn) setState(() => step = AccessStep.account);
+          if (mounted && auth.isSignedIn) {
+            setState(() => step = AccessStep.account);
+          }
           break;
         default:
           break;
@@ -406,7 +430,9 @@ class _AuthPageState extends State<AuthPage> {
           TextButton(
             onPressed: busy || resendIn > 0 ? null : () => perform((auth) async {
               await auth.resendCode(email.text.trim());
-              if (!mounted) return;
+              if (!mounted) {
+                return;
+              }
               setState(() => notice = 'Confirmação reenviada. Confira também o spam.');
               startCooldown();
             }),

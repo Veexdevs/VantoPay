@@ -23,7 +23,9 @@ class FakeAuth implements AuthService {
   @override
   Future<void> signIn(String email, String password) async {
     loginCalls++;
-    if (failure != null) throw failure!;
+    if (failure != null) {
+      throw failure!;
+    }
     signedIn = true;
     controller.add(true);
   }

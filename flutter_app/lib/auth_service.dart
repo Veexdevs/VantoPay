@@ -1,3 +1,6 @@
+import 'dart:convert';
+
+import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 abstract class AuthService {
@@ -13,8 +16,10 @@ abstract class AuthService {
 }
 
 class SupabaseAuthService implements AuthService {
-  SupabaseAuthService(this.client);
+  SupabaseAuthService(this.client, {required this.url, required this.publicKey});
   final SupabaseClient client;
+  final String url;
+  final String publicKey;
 
   // Keep redirects on this deployment, never on localhost in production.
   String get redirectUrl => Uri.base.replace(path: '/', query: '', fragment: '').toString();
@@ -45,6 +50,19 @@ class SupabaseAuthService implements AuthService {
 
   @override
   Future<void> signInWithGoogle() async {
+    // Check the public provider settings before leaving the app. Otherwise a
+    // disabled provider would redirect visitors to a raw Supabase error page.
+    final response = await http.get(
+      Uri.parse('$url/auth/v1/settings'),
+      headers: {'apikey': publicKey},
+    ).timeout(const Duration(seconds: 12));
+    if (response.statusCode != 200) {
+      throw const AuthException('Unable to load authentication settings');
+    }
+    final settings = jsonDecode(response.body) as Map<String, dynamic>;
+    if ((settings['external'] as Map<String, dynamic>?)?['google'] != true) {
+      throw const AuthException('provider is not enabled', code: 'provider_disabled');
+    }
     final opened = await client.auth.signInWithOAuth(
       OAuthProvider.google,
       redirectTo: redirectUrl,
