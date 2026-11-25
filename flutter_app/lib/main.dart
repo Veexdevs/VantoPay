@@ -3,9 +3,11 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'auth_service.dart';
+import 'motion.dart';
 
 const muted = Color(0xFF99999F);
 
@@ -53,14 +55,14 @@ class VantoPayApp extends StatelessWidget {
             filled: true,
             fillColor: const Color(0xFF101012),
             labelStyle: const TextStyle(color: muted),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(18)),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 15),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(18),
-              borderSide: const BorderSide(color: Color(0xFF333337)),
+              borderRadius: BorderRadius.circular(15),
+              borderSide: const BorderSide(color: Color(0xFF29292D)),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: BorderRadius.circular(15),
               borderSide: const BorderSide(color: Colors.white),
             ),
           ),
@@ -229,18 +231,32 @@ class _AuthPageState extends State<AuthPage> {
     return Scaffold(
       body: Stack(
         children: [
-          const Positioned.fill(child: IgnorePointer(child: CustomPaint(painter: RibbonPainter()))),
+          Positioned.fill(
+            child: IgnorePointer(
+              child: RepaintBoundary(
+                child: TweenAnimationBuilder<double>(
+                  tween: Tween(begin: reduceMotion(context) ? 1 : 0, end: 1),
+                  duration: motionDuration(context, 1400),
+                  curve: Curves.easeOutCubic,
+                  builder: (context, value, _) => Opacity(
+                    opacity: 0.45 + 0.15 * value,
+                    child: CustomPaint(painter: RibbonPainter(entrance: value)),
+                  ),
+                ),
+              ),
+            ),
+          ),
           SafeArea(
             child: LayoutBuilder(builder: (context, constraints) {
               return SingleChildScrollView(
-                padding: EdgeInsets.symmetric(horizontal: size.width < 600 ? 28 : 48),
+                padding: EdgeInsets.symmetric(horizontal: size.width < 600 ? 20 : 48),
                 child: ConstrainedBox(
                   constraints: BoxConstraints(minHeight: constraints.maxHeight),
                   child: Center(
                     child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 420),
+                      constraints: const BoxConstraints(maxWidth: 480),
                       child: Padding(
-                        padding: EdgeInsets.only(top: welcome ? 46 : 24, bottom: 30),
+                        padding: EdgeInsets.only(top: welcome ? 36 : 20, bottom: 28),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -253,19 +269,28 @@ class _AuthPageState extends State<AuthPage> {
                                   icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
                                 ),
                               ),
-                            Semantics(
-                              label: 'VantoPay', image: true,
-                              child: Image.asset('assets/brand/logo.png',
-                                width: welcome ? 238 : 146,
-                                height: welcome ? 266 : 163,
-                                fit: BoxFit.contain,
-                                excludeFromSemantics: true,
+                            MotionReveal(
+                              child: Semantics(
+                                label: 'VantoPay', image: true,
+                                child: AnimatedContainer(
+                                  duration: motionDuration(context, 420),
+                                  curve: Curves.easeInOutCubic,
+                                  width: welcome ? 154 : 104,
+                                  height: welcome ? 172 : 116,
+                                  child: Image.asset('assets/brand/logo.png',
+                                    fit: BoxFit.contain,
+                                    excludeFromSemantics: true,
+                                  ),
+                                ),
                               ),
                             ),
-                            SizedBox(height: welcome ? 48 : 30),
+                            AnimatedContainer(
+                              duration: motionDuration(context, 420),
+                              height: welcome ? 36 : 26,
+                            ),
                             AnimatedSize(
-                              duration: const Duration(milliseconds: 220),
-                              curve: Curves.easeOutCubic,
+                              duration: motionDuration(context, 420),
+                              curve: Curves.easeInOutCubic,
                               alignment: Alignment.topCenter,
                               child: KeyedSubtree(
                                 key: ValueKey(step),
@@ -276,12 +301,17 @@ class _AuthPageState extends State<AuthPage> {
                                 },
                               ),
                             ),
-                            SizedBox(height: welcome ? 46 : 34),
-                            const Text('VantoPay', style: TextStyle(color: muted, fontSize: 15, fontWeight: FontWeight.w700)),
-                            const SizedBox(height: 3),
-                            const Text('Pagamentos mais simples. Sempre.',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(color: muted, fontSize: 13)),
+                            SizedBox(height: welcome ? 38 : 28),
+                            const MotionReveal(
+                              delay: 330,
+                              child: Column(children: [
+                                SizedBox(width: 22, child: Divider(color: Color(0xFF343439))),
+                                SizedBox(height: 10),
+                                Text('Pagamentos mais simples. Sempre.',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(color: muted, fontSize: 11.5, letterSpacing: 0.1)),
+                              ]),
+                            ),
                           ],
                         ),
                       ),
@@ -298,17 +328,17 @@ class _AuthPageState extends State<AuthPage> {
 
   Widget heading(String title, String subtitle) => Column(children: [
     Text(title, textAlign: TextAlign.center,
-      style: const TextStyle(fontSize: 29, height: 1.2, fontWeight: FontWeight.w700, letterSpacing: -0.9)),
-    const SizedBox(height: 10),
+      style: const TextStyle(fontSize: 25, height: 1.25, fontWeight: FontWeight.w700, letterSpacing: -0.7)),
+    const SizedBox(height: 9),
     Text(subtitle, textAlign: TextAlign.center,
-      style: const TextStyle(fontSize: 15, color: muted, height: 1.5)),
+      style: const TextStyle(fontSize: 13, color: muted, height: 1.6)),
   ]);
 
-  Widget welcomeContent() => Column(children: [
+  Widget welcomeContent() => MotionColumn(children: [
     heading('Bem-vindo(a)!', 'Escolha como deseja acessar sua conta.'),
-    const SizedBox(height: 32),
+    const SizedBox(height: 28),
     AccessButton(label: 'Entrar', primary: true, onPressed: busy ? null : () => go(AccessStep.login)),
-    const SizedBox(height: 16),
+    const SizedBox(height: 12),
     AccessButton(label: 'Criar Conta', onPressed: busy ? null : () => go(AccessStep.signup)),
     separator(),
     googleButton(),
@@ -316,11 +346,11 @@ class _AuthPageState extends State<AuthPage> {
   ]);
 
   Widget separator() => const Padding(
-    padding: EdgeInsets.symmetric(vertical: 23, horizontal: 8),
+    padding: EdgeInsets.symmetric(vertical: 18, horizontal: 4),
     child: Row(children: [
-      Expanded(child: Divider(color: Color(0xFF49494D))),
-      Padding(padding: EdgeInsets.symmetric(horizontal: 23), child: Text('ou', style: TextStyle(color: muted, fontSize: 15))),
-      Expanded(child: Divider(color: Color(0xFF49494D))),
+      Expanded(child: Divider(color: Color(0xFF29292D))),
+      Padding(padding: EdgeInsets.symmetric(horizontal: 20), child: Text('ou', style: TextStyle(color: muted, fontSize: 12))),
+      Expanded(child: Divider(color: Color(0xFF29292D))),
     ]),
   );
 
@@ -331,7 +361,13 @@ class _AuthPageState extends State<AuthPage> {
     onPressed: busy ? null : () => perform((auth) => auth.signInWithGoogle()),
   );
 
-  Widget messages() => Column(children: [
+  Widget messages() => AnimatedSize(
+    duration: motionDuration(context, 260),
+    curve: Curves.easeOutCubic,
+    alignment: Alignment.topCenter,
+    child: MotionReveal(
+      key: ValueKey('$error|$notice'),
+      child: Column(children: [
     if (error != null)
       Padding(
         padding: const EdgeInsets.only(top: 18),
@@ -339,8 +375,8 @@ class _AuthPageState extends State<AuthPage> {
           width: double.infinity,
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: const Color(0xFF211819),
-            border: Border.all(color: const Color(0xFF5A3638)),
+            color: const Color(0xFF151517),
+            border: Border.all(color: const Color(0xFF3A3A40)),
             borderRadius: BorderRadius.circular(14)),
           child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
             const Icon(Icons.info_outline_rounded, color: Colors.white, size: 19),
@@ -353,14 +389,16 @@ class _AuthPageState extends State<AuthPage> {
       Padding(padding: const EdgeInsets.only(top: 16), child: Semantics(
         liveRegion: true, child: Text(notice!, textAlign: TextAlign.center,
           style: const TextStyle(color: Colors.white, height: 1.5)))),
-  ]);
+      ]),
+    ),
+  );
 
   Widget formContent() {
     final signup = step == AccessStep.signup;
     final verify = step == AccessStep.verify;
     return Form(
       key: formKey,
-      child: AutofillGroup(child: Column(children: [
+      child: AutofillGroup(child: MotionColumn(children: [
         heading(
           verify ? 'Verifique seu e-mail' : signup ? 'Crie sua conta' : 'Que bom ter você aqui.',
           verify ? 'Enviamos uma confirmação para\n${email.text.trim()}' : signup
@@ -374,6 +412,7 @@ class _AuthPageState extends State<AuthPage> {
             textAlign: TextAlign.center, style: TextStyle(color: muted, height: 1.5, fontSize: 14)),
           const SizedBox(height: 20),
           TextFormField(
+            style: const TextStyle(fontSize: 14),
             controller: code,
             enabled: !busy,
             decoration: const InputDecoration(labelText: 'Código de verificação', prefixIcon: Icon(Icons.key_outlined, color: Colors.white)),
@@ -387,6 +426,7 @@ class _AuthPageState extends State<AuthPage> {
         ] else ...[
           if (signup) ...[
             TextFormField(
+            style: const TextStyle(fontSize: 14),
               controller: name, enabled: !busy,
               decoration: const InputDecoration(labelText: 'Nome completo', prefixIcon: Icon(Icons.person_outline_rounded, color: Colors.white)),
               textCapitalization: TextCapitalization.words,
@@ -397,6 +437,7 @@ class _AuthPageState extends State<AuthPage> {
             const SizedBox(height: 16),
           ],
           TextFormField(
+            style: const TextStyle(fontSize: 14),
             controller: email, enabled: !busy,
             decoration: const InputDecoration(labelText: 'E-mail', hintText: 'voce@exemplo.com', prefixIcon: Icon(Icons.mail_outline_rounded, color: Colors.white)),
             keyboardType: TextInputType.emailAddress,
@@ -407,6 +448,7 @@ class _AuthPageState extends State<AuthPage> {
           ),
           const SizedBox(height: 16),
           TextFormField(
+            style: const TextStyle(fontSize: 14),
             controller: password, enabled: !busy, obscureText: hidden,
             enableSuggestions: false, autocorrect: false,
             autofillHints: [signup ? AutofillHints.newPassword : AutofillHints.password],
@@ -457,7 +499,7 @@ class _AuthPageState extends State<AuthPage> {
     );
   }
 
-  Widget accountContent() => Column(children: [
+  Widget accountContent() => MotionColumn(children: [
     const Icon(Icons.verified_user_outlined, color: Colors.white, size: 40),
     const SizedBox(height: 20),
     heading('Você está na sua conta.', 'Acesso realizado com segurança.'),
@@ -476,7 +518,7 @@ class _AuthPageState extends State<AuthPage> {
   ]);
 }
 
-class AccessButton extends StatelessWidget {
+class AccessButton extends StatefulWidget {
   const AccessButton({super.key, required this.label, this.primary = false,
     this.google = false, this.loading = false, this.onPressed});
   final String label;
@@ -486,42 +528,116 @@ class AccessButton extends StatelessWidget {
   final VoidCallback? onPressed;
 
   @override
-  Widget build(BuildContext context) => SizedBox(
-    width: double.infinity,
-    height: 58 * math.max(1, MediaQuery.textScalerOf(context).scale(16) / 16),
-    child: OutlinedButton(
-      onPressed: onPressed,
-      style: OutlinedButton.styleFrom(
-        foregroundColor: primary ? Colors.black : Colors.white,
-        backgroundColor: primary ? Colors.white : Colors.transparent,
-        disabledBackgroundColor: primary ? const Color(0xFFBBBBBB) : Colors.transparent,
-        disabledForegroundColor: primary ? Colors.black54 : Colors.white54,
-        side: BorderSide(color: primary ? Colors.white : const Color(0xFFEEEEF0), width: 1.4),
-        shape: const StadiumBorder(),
-        padding: const EdgeInsets.symmetric(horizontal: 22),
-      ),
-      child: loading
-        ? SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2, color: primary ? Colors.black : Colors.white, semanticsLabel: 'Aguarde'))
-        : Stack(alignment: Alignment.center, children: [
-            if (google)
-              const Align(alignment: Alignment.centerLeft, child: Row(mainAxisSize: MainAxisSize.min, children: [
-                GoogleMark(),
-                SizedBox(width: 16),
-                SizedBox(height: 25, child: VerticalDivider(color: Color(0xFF77777C), width: 1)),
-              ])),
-            Padding(
-              padding: EdgeInsets.only(left: google ? 42 : 0, right: google ? 0 : 24),
-              child: Text(label, textAlign: TextAlign.center, style: TextStyle(fontSize: google ? 17 : 19, fontWeight: FontWeight.w600, letterSpacing: -0.3)),
+  State<AccessButton> createState() => _AccessButtonState();
+}
+
+class _AccessButtonState extends State<AccessButton> {
+  final states = WidgetStatesController();
+
+  @override
+  void initState() {
+    super.initState();
+    states.addListener(refresh);
+  }
+
+  void refresh() {
+    // Buttons also update disabled states during build. Defer those notifications
+    // so an auth loading transition never calls setState during a child build.
+    if (SchedulerBinding.instance.schedulerPhase == SchedulerPhase.persistentCallbacks) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() {});
+        }
+      });
+    } else if (mounted) {
+      setState(() {});
+    }
+  }
+
+  @override
+  void dispose() {
+    states.removeListener(refresh);
+    states.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = widget.onPressed != null;
+    final hover = enabled && states.value.contains(WidgetState.hovered);
+    final focus = states.value.contains(WidgetState.focused);
+    final pressed = enabled && states.value.contains(WidgetState.pressed);
+    final primary = widget.primary;
+    final google = widget.google;
+    final foreground = primary ? Colors.black : Colors.white;
+    final reduced = reduceMotion(context);
+    return AnimatedScale(
+      scale: reduced ? 1 : pressed ? 0.985 : hover ? 1.008 : 1,
+      duration: motionDuration(context, 160),
+      curve: Curves.easeOutCubic,
+      child: AnimatedContainer(
+        duration: motionDuration(context, 200),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(28),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.white.withValues(alpha: focus ? 0.16 : hover ? 0.08 : 0),
+              blurRadius: focus ? 0 : 24,
+              spreadRadius: focus ? 3 : 0,
             ),
-            if (!google)
-              Align(alignment: Alignment.centerRight, child: Container(
-                width: 29, height: 29,
-                decoration: BoxDecoration(color: primary ? Colors.black : Colors.transparent, shape: BoxShape.circle),
-                child: const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 21),
-              )),
-          ]),
-    ),
-  );
+          ],
+        ),
+        child: SizedBox(
+          width: double.infinity,
+          // Compact visually; never below a comfortable 48px touch target.
+          height: 48 * math.max(1, MediaQuery.textScalerOf(context).scale(16) / 16),
+          child: OutlinedButton(
+            statesController: states,
+            onPressed: widget.onPressed,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: foreground,
+              backgroundColor: primary ? const Color(0xFFF4F4F5) : hover ? const Color(0xFF17171A) : const Color(0xFF080809),
+              disabledBackgroundColor: primary ? const Color(0xFFBBBBBB) : const Color(0xFF080809),
+              disabledForegroundColor: primary ? Colors.black54 : Colors.white54,
+              side: BorderSide(color: primary ? const Color(0xFFF4F4F5) : focus ? Colors.white : hover ? const Color(0xFF88888F) : const Color(0xFF45454B)),
+              shape: const StadiumBorder(),
+              animationDuration: motionDuration(context, 180),
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+            ),
+            child: AnimatedSwitcher(
+              duration: motionDuration(context, 180),
+              child: widget.loading
+                ? SizedBox(key: const ValueKey('loading'), width: 18, height: 18,
+                    child: reduced
+                      ? Icon(Icons.hourglass_top_rounded, size: 18, color: foreground, semanticLabel: 'Aguarde')
+                      : CircularProgressIndicator(strokeWidth: 1.7, color: foreground, semanticsLabel: 'Aguarde'))
+                : Stack(key: const ValueKey('label'), alignment: Alignment.center, children: [
+                    if (google)
+                      const Align(alignment: Alignment.centerLeft, child: GoogleMark()),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: google ? 30 : 26),
+                      child: Text(widget.label, textAlign: TextAlign.center,
+                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, letterSpacing: -0.2)),
+                    ),
+                    if (!google)
+                      Align(alignment: Alignment.centerRight,
+                        child: AnimatedSlide(
+                          offset: reduced ? Offset.zero : Offset(hover ? 0.12 : 0, 0),
+                          duration: motionDuration(context, 180),
+                          child: Container(
+                            width: 23, height: 23,
+                            decoration: BoxDecoration(color: primary ? Colors.black : Colors.transparent, shape: BoxShape.circle),
+                            child: const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 16),
+                          ),
+                        ),
+                      ),
+                  ]),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 // A monochrome vector mark, not an emoji or a font-dependent character.
@@ -529,7 +645,7 @@ class GoogleMark extends StatelessWidget {
   const GoogleMark({super.key});
   @override
   Widget build(BuildContext context) => const SizedBox(
-    width: 23, height: 23,
+    width: 18, height: 18,
     child: CustomPaint(painter: GoogleMarkPainter()),
   );
 }
@@ -538,7 +654,7 @@ class GoogleMarkPainter extends CustomPainter {
   const GoogleMarkPainter();
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = Colors.white..style = PaintingStyle.stroke..strokeWidth = 4;
+    final paint = Paint()..color = Colors.white..style = PaintingStyle.stroke..strokeWidth = 3;
     canvas.drawArc(Rect.fromLTWH(2, 2, size.width - 4, size.height - 4), 0.15, math.pi * 1.76, false, paint);
     canvas.drawLine(Offset(size.width / 2, size.height / 2), Offset(size.width - 1, size.height / 2), paint);
     canvas.drawLine(Offset(size.width - 2, size.height / 2), Offset(size.width - 2, size.height * .72), paint);
@@ -548,11 +664,13 @@ class GoogleMarkPainter extends CustomPainter {
 }
 
 class RibbonPainter extends CustomPainter {
-  const RibbonPainter();
+  const RibbonPainter({this.entrance = 1});
+  final double entrance;
   @override
   void paint(Canvas canvas, Size size) {
     final scale = (size.width / 440).clamp(0.8, 1.5);
     canvas.save();
+    canvas.translate(-12 * (1 - entrance), -20 * (1 - entrance));
     canvas.scale(scale);
     final top = Path()
       ..moveTo(-80, -100)..lineTo(245, -100)
@@ -572,6 +690,7 @@ class RibbonPainter extends CustomPainter {
     canvas.save();
     canvas.translate(size.width, size.height);
     canvas.rotate(math.pi);
+    canvas.translate(-12 * (1 - entrance), -20 * (1 - entrance));
     canvas.scale(scale);
     canvas.drawPath(top, Paint()..shader = const LinearGradient(
       begin: Alignment.topLeft, end: Alignment.bottomRight,
@@ -583,5 +702,5 @@ class RibbonPainter extends CustomPainter {
     canvas.restore();
   }
   @override
-  bool shouldRepaint(RibbonPainter oldDelegate) => false;
+  bool shouldRepaint(RibbonPainter oldDelegate) => oldDelegate.entrance != entrance;
 }
