@@ -4,8 +4,9 @@ import chromium from '@sparticuz/chromium';
 import { chromium as playwright } from 'playwright-core';
 import { createHandler } from '../api/auth.js';
 let browser, stage = 'launch';
+let currentStatus;
 try {
-  browser = await playwright.launch({ executablePath: await chromium.executablePath(), args: chromium.args, headless: true });
+  browser = await playwright.launch({ executablePath: await chromium.executablePath(), args: chromium.args.filter(arg => arg !== '--disable-web-security'), headless: true });
   const page = await browser.newPage({ viewport: { width: 440, height: 1100 }, reducedMotion: 'reduce' });
   const actions = [];
   page.on('response', response => {
@@ -22,6 +23,7 @@ try {
       let status, data;
       const res = { setHeader() {}, status(value) { status = value; return this; }, json(value) { data = value; } };
       await createHandler()({ method: 'POST', headers: { ...headers, host: new URL(route.request().url()).host }, body }, res);
+      currentStatus = status;
       console.log('AUTH_BROWSER_CURRENT_STATUS', status);
       return route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(data) });
     }
@@ -50,8 +52,10 @@ try {
   await type('Código de verificação', '123456');
   await page.getByRole('button', { name: 'Verificar e-mail' }).click();
   await page.getByRole('button', { name: 'Sair da conta' }).waitFor({ timeout: 15000 });
+  if (currentStatus !== 200) throw new Error('Server rejected browser headers');
   console.log('AUTH_BROWSER', JSON.stringify({ ok: true, actions }));
 } catch (error) {
+  process.exitCode = 1;
   console.log('AUTH_BROWSER', JSON.stringify({ ok: false, stage, type: error.name }));
   // Print only visible semantic labels, never user data or request bodies.
   const page = browser?.contexts()[0]?.pages()[0];

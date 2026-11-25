@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
-node tool/auth_diagnostics.mjs
-node tool/auth_integration.mjs
-node tool/auth_browser_smoke.mjs
+# Remote integration checks use disposable accounts only on previews.
+# Production builds never create test accounts or probe the live website.
+if [ "${VERCEL_ENV:-}" = "preview" ]; then
+  node tool/auth_diagnostics.mjs
+  node tool/auth_integration.mjs
+  node tool/auth_browser_smoke.mjs
+fi
 npm test
 : "${SUPABASE_URL:?Configure SUPABASE_URL na Vercel}"
 : "${SUPABASE_ANON_KEY:?Configure SUPABASE_ANON_KEY na Vercel}"
