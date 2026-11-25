@@ -108,6 +108,9 @@ class _AuthPageState extends State<AuthPage> {
       if (!mounted) {
         return;
       }
+      if (signedIn) {
+        resendTimer?.cancel();
+      }
       setState(() {
         if (signedIn) {
           step = AccessStep.account;
@@ -203,7 +206,9 @@ class _AuthPageState extends State<AuthPage> {
           }
           password.clear();
           setState(() => step = signedIn ? AccessStep.account : AccessStep.verify);
-          if (!signedIn) startCooldown();
+          if (!signedIn) {
+            startCooldown();
+          }
           break;
         case AccessStep.verify:
           await auth.verifyEmail(email.text.trim(), code.text.trim());
@@ -461,7 +466,11 @@ class _AuthPageState extends State<AuthPage> {
     const SizedBox(height: 28),
     AccessButton(label: 'Sair da conta', loading: busy, onPressed: busy ? null : () => perform((auth) async {
       await auth.signOut();
-      if (mounted) go(AccessStep.welcome);
+      if (mounted) {
+        email.clear();
+        name.clear();
+        setState(() => step = AccessStep.welcome);
+      }
     })),
     messages(),
   ]);
