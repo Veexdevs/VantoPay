@@ -18,17 +18,31 @@ abstract class AuthService {
 }
 
 class SupabaseAuthService implements AuthService {
-  SupabaseAuthService(this.client, {required this.url, required this.publicKey}) {
-    client.auth.onAuthStateChange.listen((event) {
+  SupabaseAuthService(this.client, {required this.url, required this.publicKey,
+    http.Client? transport, Uri? apiUri,
+  }) : _transport = transport ?? http.Client(),
+       _apiUri = apiUri ?? Uri.base.resolve('/api/auth') {
+    _authSubscription = client.auth.onAuthStateChange.listen((event) {
       if (event.session != null) {
         unawaited(_exchangeOAuth(event.session!));
       }
     });
-    unawaited(_restore());
+    _ready = _restore();
   }
   final SupabaseClient client;
   final String url;
   final String publicKey;
+  final http.Client _transport;
+  final Uri _apiUri;
+  late final Future<void> _ready;
+  late final StreamSubscription<AuthState> _authSubscription;
+  int _requestVersion = 0;
+
+  Future<void> dispose() async {
+    await _authSubscription.cancel();
+    await _changes.close();
+    _transport.close();
+  }
   final _changes = StreamController<bool>.broadcast();
   bool _signedIn = false;
   bool _pending = false;
@@ -46,11 +60,19 @@ class SupabaseAuthService implements AuthService {
   Stream<bool> get sessionChanges => _changes.stream;
 
   Future<void> _request(String action, [Map<String, dynamic> values = const {}]) async {
-    final response = await http.post(Uri.base.resolve('/api/auth'),
+    final version = ++_requestVersion;
+    final response = await _transport.post(_apiUri,
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'action': action, ...values}),
     ).timeout(const Duration(seconds: 40));
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    Map<String, dynamic> data;
+    try {
+      data = jsonDecode(response.body) as Map<String, dynamic>;
+    } catch (_) {
+      throw const AuthException('Invalid authentication server response', code: 'service_unavailable');
+    }
+    // A late bootstrap response must never overwrite a completed login/OAuth exchange.
+    if (action == 'status' && version != _requestVersion) { return; }
     if (response.statusCode != 200) {
       if (data['pending'] == true) {
         _pending = true;
@@ -95,19 +117,23 @@ class SupabaseAuthService implements AuthService {
 
   @override
   Future<bool> signUp(String name, String email, String password) async {
+    await _ready;
     await _request('signup', {'display_name': name, 'email': email, 'password': password});
     return isSignedIn;
   }
 
   @override
-  Future<void> signIn(String email, String password) =>
-    _request('login', {'email': email, 'password': password});
+  Future<void> signIn(String email, String password) async {
+    await _ready;
+    await _request('login', {'email': email, 'password': password});
+  }
 
   @override
   Future<void> signInWithGoogle() async {
+    await _ready;
     // Check the public provider settings before leaving the app. Otherwise a
     // disabled provider would redirect visitors to a raw Supabase error page.
-    final response = await http.get(
+    final response = await _transport.get(
       Uri.parse('$url/auth/v1/settings'),
       headers: {'apikey': publicKey},
     ).timeout(const Duration(seconds: 12));
@@ -148,6 +174,7 @@ String friendlyAuthError(Object error) {
         return 'E-mail ou senha incorretos. Confira seus dados.';
       case 'email_not_confirmed':
         return 'Confirme seu e-mail antes de entrar. Verifique sua caixa de entrada.';
+      case 'signup_unavailable':
       case 'user_already_exists':
         return 'Já existe uma conta com este e-mail. Tente entrar.';
       case 'over_email_send_rate_limit':
@@ -158,12 +185,17 @@ String friendlyAuthError(Object error) {
       case 'weak_password':
         return 'Escolha uma senha mais forte, com pelo menos 8 caracteres.';
       case 'provider_disabled':
+        return 'O acesso com Google ainda precisa ser ativado pelo VantoPay. Use seu e-mail por enquanto.';
+      case 'server_configuration':
+      case 'service_unavailable':
+        return 'O serviço de acesso está temporariamente indisponível. Tente novamente em instantes.';
       case 'validation_failed':
         return 'Este método de acesso ainda não está disponível. Tente entrar com e-mail.';
       case 'email_address_invalid':
         return 'Informe um endereço de e-mail válido.';
       case 'email_address_not_authorized':
       case 'email_delivery_failed':
+        return 'Não foi possível enviar seu código agora. Aguarde e toque em reenviar.';
       case 'unexpected_failure':
         return 'Não foi possível enviar o e-mail. O envio precisa ser configurado pelo VantoPay.';
     }

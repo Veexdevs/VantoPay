@@ -18,7 +18,7 @@ void main() {
     );
     expect(
       friendlyAuthError(const AuthException('Disabled', code: 'provider_disabled')),
-      contains('ainda não está disponível'),
+      contains('Google ainda precisa ser ativado'),
     );
   });
 

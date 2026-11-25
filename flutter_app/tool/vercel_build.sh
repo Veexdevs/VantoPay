@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 node tool/auth_diagnostics.mjs
+node tool/auth_integration.mjs
 npm test
 : "${SUPABASE_URL:?Configure SUPABASE_URL na Vercel}"
 : "${SUPABASE_ANON_KEY:?Configure SUPABASE_ANON_KEY na Vercel}"

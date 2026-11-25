@@ -17,12 +17,15 @@ return async function handler(req, res) {
   if (Number(req.headers['content-length'] || 0) > 16384) return res.status(413).json({ code: 'invalid_request' });
   const cookies = Object.fromEntries((req.headers.cookie || '').split(';').map(v => v.trim().split(/=(.*)/s)).filter(v => v[0]));
   const outgoing = [];
-  const cookie = (name, value, age) => {
-    outgoing.push(`${names[name]}=${value}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${age}`);
+  const cookie = (name, value, age, uid) => {
+    const cookieName = uid ? `${names[name]}_${uid}` : names[name];
+    outgoing.push(`${cookieName}=${value}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${age}`);
     res.setHeader('Set-Cookie', outgoing);
   };
   const save = (name, data, age) => cookie(name, seal(data, age), age);
   const read = name => unseal(cookies[names[name]]);
+  let action = 'unknown';
+  try {
   const admin = clientFactory(process.env.SUPABASE_SERVICE_ROLE_KEY);
   const auth = clientFactory(process.env.SUPABASE_ANON_KEY);
   const rpc = async (name, args) => checked(await admin.rpc(`vantopay_${name}`, args));
@@ -30,7 +33,9 @@ return async function handler(req, res) {
     if (!await rpc('auth_limit', { p_key: digest(key), p_limit: max, p_window: seconds })) fail('over_request_rate_limit', 429);
   };
   const trusted = async uid => {
-    const token = cookies[names.device];
+    // Keep each verified account on this browser; switching accounts must not
+    // overwrite the trust token of the previous account. Accept legacy cookies.
+    const token = cookies[`${names.device}_${uid}`] || cookies[names.device];
     if (!token) return false;
     const rows = checked(await admin.from('vantopay_trusted_devices').select('user_id')
       .eq('token_hash', digest(token)).eq('user_id', uid).gt('expires_at', new Date().toISOString()));
@@ -63,10 +68,9 @@ return async function handler(req, res) {
     cookie('pending', '', 0);
     return { verified: true, pending: false, email: user.email };
   };
-  try {
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
     if (!body || JSON.stringify(body).length > 16384) fail('invalid_request');
-    const { action } = body;
+    action = body.action;
     // Vercel supplies x-real-ip; never trust a user-chosen forwarded-for chain.
     await limit(`ip:${req.headers['x-real-ip'] || req.socket?.remoteAddress || 'unknown'}`, 100, 600);
     let result;
@@ -79,13 +83,15 @@ return async function handler(req, res) {
         const displayName = String(body.display_name || '').trim();
         if (password.length < 8 || displayName.length < 3 || displayName.length > 80) fail('invalid_request');
         const created = await admin.auth.admin.createUser({ email, password, email_confirm: false, user_metadata: { display_name: displayName } });
+        if (created.error && !['email_exists', 'user_already_exists'].includes(created.error.code)) {
+          throw created.error;
+        }
         let uid = created.data?.user?.id;
         // Repeat signup never changes an existing account's password or metadata.
         if (!uid) uid = await rpc('unconfirmed_user', { p_email: email });
         if (!uid) {
-          // Same response shape, no account enumeration or challenge to an already confirmed user.
-          save('pending', { uid: null, email, purpose: 'signup' }, 900);
-          result = { verified: false, pending: true, email };
+          // Do not claim that a code was sent when no challenge exists.
+          fail('signup_unavailable', 409);
         } else result = await issue({ uid, email, purpose: 'signup' });
       } else {
         const response = await auth.auth.signInWithPassword({ email, password });
@@ -126,7 +132,7 @@ return async function handler(req, res) {
       if (user.id !== verified.user_id) fail('invalid_credentials', 401);
       const device = randomToken();
       checked(await admin.from('vantopay_trusted_devices').insert({ token_hash: digest(device), user_id: user.id }));
-      cookie('device', device, 30 * 86400);
+      cookie('device', device, 30 * 86400, user.id);
       result = promote(session, user);
     } else if (action === 'status') {
       const sessionCookie = read('session');
@@ -145,8 +151,14 @@ return async function handler(req, res) {
     } else fail('invalid_request');
     return res.status(200).json(result);
   } catch (error) {
-    // Never log SMTP credentials, codes, sessions, or raw provider errors.
-    return res.status(error.status || 400).json({ code: error.publicCode || 'unexpected_failure',
+    // Log only allowlisted categories, never raw errors (which can contain credentials).
+    const category = error.publicCode || (error.status === 401 || error.status === 403
+      ? 'server_configuration' : 'service_unavailable');
+    console.error('vantopay_auth_failure', JSON.stringify({
+      action: ['signup', 'login', 'oauth', 'resend', 'verify', 'status', 'logout'].includes(action) ? action : 'unknown',
+      category,
+    }));
+    return res.status(error.publicCode ? error.status : 503).json({ code: category,
       ...(error.pendingEmail ? { pending: true, email: error.pendingEmail } : {}) });
   }
 }
