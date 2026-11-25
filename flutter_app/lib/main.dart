@@ -8,6 +8,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'auth_service.dart';
 import 'motion.dart';
+import 'keyboard_scroll_view.dart';
 
 const muted = Color(0xFF99999F);
 
@@ -141,6 +142,7 @@ class _AuthPageState extends State<AuthPage> {
     if (busy) {
       return;
     }
+    FocusScope.of(context).unfocus();
     setState(() {
       step = next;
       error = null;
@@ -229,6 +231,9 @@ class _AuthPageState extends State<AuthPage> {
     final size = MediaQuery.sizeOf(context);
     final welcome = step == AccessStep.welcome;
     return Scaffold(
+      // Only KeyboardScrollView applies IME insets; keep the background painted
+      // across the full screen when the keyboard opens or closes.
+      resizeToAvoidBottomInset: false,
       body: Stack(
         children: [
           Positioned.fill(
@@ -246,11 +251,9 @@ class _AuthPageState extends State<AuthPage> {
               ),
             ),
           ),
-          SafeArea(
-            child: LayoutBuilder(builder: (context, constraints) {
-              return SingleChildScrollView(
-                padding: EdgeInsets.symmetric(horizontal: size.width < 600 ? 20 : 48),
-                child: ConstrainedBox(
+          KeyboardScrollView(
+            padding: EdgeInsets.symmetric(horizontal: size.width < 600 ? 20 : 48),
+            builder: (context, constraints) => ConstrainedBox(
                   constraints: BoxConstraints(minHeight: constraints.maxHeight),
                   child: Center(
                     child: ConstrainedBox(
@@ -317,9 +320,7 @@ class _AuthPageState extends State<AuthPage> {
                       ),
                     ),
                   ),
-                ),
-              );
-            }),
+            ),
           ),
         ],
       ),
@@ -412,6 +413,7 @@ class _AuthPageState extends State<AuthPage> {
             textAlign: TextAlign.center, style: TextStyle(color: muted, height: 1.5, fontSize: 14)),
           const SizedBox(height: 20),
           TextFormField(
+            onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
             style: const TextStyle(fontSize: 14),
             controller: code,
             enabled: !busy,
@@ -426,6 +428,7 @@ class _AuthPageState extends State<AuthPage> {
         ] else ...[
           if (signup) ...[
             TextFormField(
+            onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
             style: const TextStyle(fontSize: 14),
               controller: name, enabled: !busy,
               decoration: const InputDecoration(labelText: 'Nome completo', prefixIcon: Icon(Icons.person_outline_rounded, color: Colors.white)),
@@ -437,6 +440,7 @@ class _AuthPageState extends State<AuthPage> {
             const SizedBox(height: 16),
           ],
           TextFormField(
+            onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
             style: const TextStyle(fontSize: 14),
             controller: email, enabled: !busy,
             decoration: const InputDecoration(labelText: 'E-mail', hintText: 'voce@exemplo.com', prefixIcon: Icon(Icons.mail_outline_rounded, color: Colors.white)),
@@ -448,6 +452,7 @@ class _AuthPageState extends State<AuthPage> {
           ),
           const SizedBox(height: 16),
           TextFormField(
+            onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
             style: const TextStyle(fontSize: 14),
             controller: password, enabled: !busy, obscureText: hidden,
             enableSuggestions: false, autocorrect: false,

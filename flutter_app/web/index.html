@@ -3,7 +3,7 @@
 <head>
   <base href="$FLUTTER_BASE_HREF">
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
   <meta name="description" content="Acesse sua conta VantoPay. Pagamentos mais simples. Sempre.">
   <meta name="theme-color" content="#000000">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -14,7 +14,10 @@
   <link rel="manifest" href="manifest.json">
   <title>VantoPay · Acesse sua conta</title>
   <style>
-    html,body{margin:0;height:100%;background:#000;color:#fff}
+    /* Flutter owns scrolling. Prevent the browser document from keeping an
+       off-screen scroll offset after the software keyboard is dismissed. */
+    html,body{margin:0;width:100%;height:100%;overflow:hidden;overscroll-behavior:none;background:#000;color:#fff}
+    body{position:fixed;inset:0}
     #loading{position:fixed;inset:0;display:grid;place-items:center;font:14px system-ui;letter-spacing:.08em}
     #loading span{animation:pulse 1.5s ease-in-out infinite}
     @keyframes pulse{50%{opacity:.35}}
