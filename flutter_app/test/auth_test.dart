@@ -9,6 +9,7 @@ import 'package:vantopay/main.dart';
 class FakeAuth implements AuthService {
   final controller = StreamController<bool>.broadcast();
   bool signedIn = false;
+  bool pending = false;
   int googleCalls = 0;
   int signupCalls = 0;
   int loginCalls = 0;
@@ -17,7 +18,9 @@ class FakeAuth implements AuthService {
   @override
   bool get isSignedIn => signedIn;
   @override
-  String? get email => signedIn ? 'teste@example.com' : null;
+  bool get needsVerification => pending;
+  @override
+  String? get email => signedIn || pending ? 'teste@example.com' : null;
   @override
   Stream<bool> get sessionChanges => controller.stream;
   @override
@@ -26,8 +29,8 @@ class FakeAuth implements AuthService {
     if (failure != null) {
       throw failure!;
     }
-    signedIn = true;
-    controller.add(true);
+    signedIn = !pending;
+    controller.add(signedIn);
   }
   @override
   Future<bool> signUp(String name, String email, String password) async {
@@ -133,6 +136,8 @@ void main() {
     final auth = FakeAuth();
     await launch(tester, auth: auth);
     await tapText(tester, 'Criar Conta');
+    expect(find.text('Nome de exibição'), findsOneWidget);
+    expect(find.text('Nome completo'), findsNothing);
     await tester.enterText(find.byType(TextFormField).at(0), 'Pessoa Teste');
     await tester.enterText(find.byType(TextFormField).at(1), 'teste@example.com');
     await tester.enterText(find.byType(TextFormField).at(2), 'senhaSegura123');
@@ -140,7 +145,28 @@ void main() {
     expect(auth.signupCalls, 1);
     expect(find.text('Verifique seu e-mail'), findsOneWidget);
     expect(find.textContaining('Reenviar em '), findsOneWidget);
-    await tester.enterText(find.byType(TextFormField), '12345678');
+    await tester.enterText(find.byType(TextFormField), '123456');
+    await tapText(tester, 'Verificar e-mail');
+    expect(auth.verifyCalls, 1);
+    expect(find.text('Você está na sua conta.'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('new device login waits for six-digit verification', (tester) async {
+    final auth = FakeAuth();
+    await launch(tester, auth: auth);
+    await tapText(tester, 'Entrar');
+    await tester.enterText(find.byType(TextFormField).at(0), 'teste@example.com');
+    await tester.enterText(find.byType(TextFormField).at(1), 'senhaSegura123');
+    auth.pending = true;
+    await tapText(tester, 'Entrar');
+    expect(find.text('Verifique seu e-mail'), findsOneWidget);
+    expect(find.text('Você está na sua conta.'), findsNothing);
+    await tester.enterText(find.byType(TextFormField), '12345');
+    await tapText(tester, 'Verificar e-mail');
+    expect(auth.verifyCalls, 0);
+    expect(find.text('Digite o código de 6 dígitos.'), findsOneWidget);
+    await tester.enterText(find.byType(TextFormField), '123456');
     await tapText(tester, 'Verificar e-mail');
     expect(auth.verifyCalls, 1);
     expect(find.text('Você está na sua conta.'), findsOneWidget);

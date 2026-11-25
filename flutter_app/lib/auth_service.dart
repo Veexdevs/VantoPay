@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
@@ -6,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 abstract class AuthService {
   bool get isSignedIn;
   String? get email;
+  bool get needsVerification;
   Stream<bool> get sessionChanges;
   Future<bool> signUp(String name, String email, String password);
   Future<void> signIn(String email, String password);
@@ -16,37 +18,90 @@ abstract class AuthService {
 }
 
 class SupabaseAuthService implements AuthService {
-  SupabaseAuthService(this.client, {required this.url, required this.publicKey});
+  SupabaseAuthService(this.client, {required this.url, required this.publicKey}) {
+    client.auth.onAuthStateChange.listen((event) {
+      if (event.session != null) {
+        unawaited(_exchangeOAuth(event.session!));
+      }
+    });
+    unawaited(_restore());
+  }
   final SupabaseClient client;
   final String url;
   final String publicKey;
+  final _changes = StreamController<bool>.broadcast();
+  bool _signedIn = false;
+  bool _pending = false;
+  bool _exchanging = false;
+  String? _email;
 
-  // Keep redirects on this deployment, never on localhost in production.
   String get redirectUrl => Uri.base.replace(path: '/', query: '', fragment: '').toString();
+  @override
+  bool get isSignedIn => _signedIn;
+  @override
+  bool get needsVerification => _pending;
+  @override
+  String? get email => _email;
+  @override
+  Stream<bool> get sessionChanges => _changes.stream;
 
-  @override
-  bool get isSignedIn => client.auth.currentSession != null;
-  @override
-  String? get email => client.auth.currentUser?.email;
-  @override
-  Stream<bool> get sessionChanges => client.auth.onAuthStateChange
-      .map((event) => event.session != null);
+  Future<void> _request(String action, [Map<String, dynamic> values = const {}]) async {
+    final response = await http.post(Uri.base.resolve('/api/auth'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'action': action, ...values}),
+    ).timeout(const Duration(seconds: 40));
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    if (response.statusCode != 200) {
+      if (data['pending'] == true) {
+        _pending = true;
+        _signedIn = false;
+        _email = data['email'] as String?;
+        _changes.add(false);
+      }
+      throw AuthException('Server authentication failed', code: data['code'] as String?);
+    }
+    _signedIn = data['verified'] == true;
+    _pending = data['pending'] == true;
+    _email = data['email'] as String?;
+    _changes.add(_signedIn);
+  }
+
+  Future<void> _restore() async {
+    try {
+      if (client.auth.currentSession != null) {
+        await _exchangeOAuth(client.auth.currentSession!);
+      } else {
+        await _request('status');
+      }
+    } catch (_) {
+      // A failed restore must never grant access. An explicit login can retry.
+    }
+  }
+
+  Future<void> _exchangeOAuth(Session session) async {
+    if (_exchanging) { return; }
+    _exchanging = true;
+    try {
+      await _request('oauth', {'access_token': session.accessToken, 'refresh_token': session.refreshToken});
+      // Tokens live only in encrypted HttpOnly server cookies after exchange.
+      await client.auth.signOut(scope: SignOutScope.local);
+    } catch (error) {
+      _signedIn = false;
+      _changes.addError(error);
+    } finally {
+      _exchanging = false;
+    }
+  }
 
   @override
   Future<bool> signUp(String name, String email, String password) async {
-    final response = await client.auth.signUp(
-      email: email,
-      password: password,
-      data: {'full_name': name},
-      emailRedirectTo: redirectUrl,
-    );
-    return response.session != null;
+    await _request('signup', {'display_name': name, 'email': email, 'password': password});
+    return isSignedIn;
   }
 
   @override
-  Future<void> signIn(String email, String password) async {
-    await client.auth.signInWithPassword(email: email, password: password);
-  }
+  Future<void> signIn(String email, String password) =>
+    _request('login', {'email': email, 'password': password});
 
   @override
   Future<void> signInWithGoogle() async {
@@ -73,18 +128,17 @@ class SupabaseAuthService implements AuthService {
   }
 
   @override
-  Future<void> verifyEmail(String email, String code) async {
-    await client.auth.verifyOTP(email: email, token: code, type: OtpType.signup);
-  }
+  Future<void> verifyEmail(String email, String code) => _request('verify', {'code': code});
 
   @override
-  Future<void> resendCode(String email) async {
-    await client.auth.resend(type: OtpType.signup, email: email,
-        emailRedirectTo: redirectUrl);
-  }
+  Future<void> resendCode(String email) => _request('resend');
 
   @override
-  Future<void> signOut() => client.auth.signOut();
+  Future<void> signOut() async {
+    await _request('logout');
+    await client.auth.signOut(scope: SignOutScope.local);
+  }
+
 }
 
 String friendlyAuthError(Object error) {
@@ -109,6 +163,7 @@ String friendlyAuthError(Object error) {
       case 'email_address_invalid':
         return 'Informe um endereço de e-mail válido.';
       case 'email_address_not_authorized':
+      case 'email_delivery_failed':
       case 'unexpected_failure':
         return 'Não foi possível enviar o e-mail. O envio precisa ser configurado pelo VantoPay.';
     }
