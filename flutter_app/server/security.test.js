@@ -33,3 +33,13 @@ test('mutations require exact HTTPS origin and JSON (CSRF protection)', () => {
   assert.equal(sameOrigin({ headers: { ...req.headers, origin: undefined } }), false);
   assert.equal(sameOrigin({ headers: { ...req.headers, 'content-type': 'text/plain' } }), false);
 });
+
+test('same-origin browser metadata is accepted when Origin is omitted', () => {
+  const headers = { host: 'vantopay.vercel.app', 'content-type': 'application/json; charset=utf-8', 'sec-fetch-site': 'same-origin' };
+  assert.equal(sameOrigin({ headers }), true);
+  assert.equal(sameOrigin({ headers: { ...headers, origin: 'null' } }), false);
+  assert.equal(sameOrigin({ headers: { ...headers, origin: 'https://attacker.test' } }), false);
+  for (const site of ['cross-site', 'same-site', 'none', undefined]) {
+    assert.equal(sameOrigin({ headers: { ...headers, 'sec-fetch-site': site } }), false);
+  }
+});

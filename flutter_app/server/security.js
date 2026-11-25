@@ -20,6 +20,13 @@ export function unseal(value) {
 }
 export function sameOrigin(req) {
   // No CORS; all browser requests must originate on this deployment.
-  return req.headers.origin === `https://${req.headers.host}` &&
-    req.headers['content-type']?.split(';')[0] === 'application/json';
+  const origin = req.headers.origin;
+  // Some same-origin browser fetches omit Origin. Fetch Metadata is set by
+  // the browser (not page JavaScript), and is safe as a fallback only when
+  // Origin is absent. Never accept null/foreign Origin or same-site requests.
+  const ownSite = origin
+    ? origin === `https://${req.headers.host}`
+    : req.headers['sec-fetch-site'] === 'same-origin';
+  return ownSite &&
+    req.headers['content-type']?.split(';')[0].trim().toLowerCase() === 'application/json';
 }

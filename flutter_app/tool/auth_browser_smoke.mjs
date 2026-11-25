@@ -2,6 +2,7 @@
 // is created or email delivered. Only read-only status reaches the real API.
 import chromium from '@sparticuz/chromium';
 import { chromium as playwright } from 'playwright-core';
+import { createHandler } from '../api/auth.js';
 let browser, stage = 'launch';
 try {
   browser = await playwright.launch({ executablePath: await chromium.executablePath(), args: chromium.args, headless: true });
@@ -13,7 +14,17 @@ try {
   await page.route('**/api/auth', async route => {
     const body = route.request().postDataJSON();
     actions.push(body.action);
-    if (body.action === 'status') return route.continue();
+    if (body.action === 'status') {
+      const headers = await route.request().allHeaders();
+      console.log('AUTH_BROWSER_HEADERS', JSON.stringify({ origin: headers.origin, fetchSite: headers['sec-fetch-site'], contentType: headers['content-type'] }));
+      // Exercise the current backend with actual Chromium request headers,
+      // rather than the not-yet-updated production backend.
+      let status, data;
+      const res = { setHeader() {}, status(value) { status = value; return this; }, json(value) { data = value; } };
+      await createHandler()({ method: 'POST', headers: { ...headers, host: new URL(route.request().url()).host }, body }, res);
+      console.log('AUTH_BROWSER_CURRENT_STATUS', status);
+      return route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(data) });
+    }
     const verified = body.action === 'verify' || body.action === 'login';
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ verified, pending: body.action === 'signup', email: 'browser-test@example.invalid' }) });
   });
