@@ -16,6 +16,7 @@ const admin = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVIC
   { auth: { persistSession: false, autoRefreshToken: false } });
 const email = `vp-browser-${randomUUID()}@example.invalid`, password = `Vp-${randomUUID()}!`;
 let uid, otp, sent = 0, browser, server, stage = 'setup';
+const submitted = [];
 const scratch = await mkdtemp(join(tmpdir(), 'vp-auth-e2e-'));
 const handler = createHandler({
   clientFactory: key => {
@@ -38,6 +39,10 @@ try {
       if (path === '/api/auth') {
         const chunks = []; for await (const chunk of req) chunks.push(chunk);
         req.body = JSON.parse(Buffer.concat(chunks).toString());
+        if (['signup', 'login'].includes(req.body.action)) {
+          submitted.push({ action: req.body.action, emailMatches: req.body.email === email,
+            passwordMatches: req.body.password === password });
+        }
         res.status = code => { res.statusCode = code; return res; };
         res.json = data => res.end(JSON.stringify(data));
         res.setHeader('Content-Type', 'application/json');
@@ -57,7 +62,7 @@ try {
   const page = await context.newPage();
   const statuses = [];
   page.on('response', response => { if (new URL(response.url()).pathname === '/api/auth') statuses.push(response.status()); });
-  const type = async (name, value) => { await page.getByRole('textbox', { name, exact: true }).click(); await page.keyboard.type(value, { delay: 15 }); };
+  const type = async (name, value) => { await page.getByRole('textbox', { name, exact: true }).click(); await page.keyboard.press('ControlOrMeta+A'); await page.keyboard.type(value, { delay: 15 }); };
   const ready = async () => {
     const semantics = page.locator('flt-semantics-placeholder');
     if (await semantics.count()) await semantics.evaluate(el => el.click());
@@ -94,7 +99,7 @@ try {
   assert.ok(statuses.every(status => status === 200));
   console.log('AUTH_BROWSER_E2E', JSON.stringify({ ok: true, signup: true, verify: true, restored: true, loginWithoutNewCode: true, browserCookies: true }));
 } catch (error) {
-  console.error('AUTH_BROWSER_E2E', JSON.stringify({ ok: false, stage, type: error.name }));
+  console.error('AUTH_BROWSER_E2E', JSON.stringify({ ok: false, stage, type: error.name, submitted }));
   process.exitCode = 1;
 } finally {
   await browser?.close();
