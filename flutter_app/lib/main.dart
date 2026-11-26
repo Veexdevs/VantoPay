@@ -18,12 +18,16 @@ Future<void> main() async {
   const key = String.fromEnvironment('SUPABASE_ANON_KEY');
   AuthService? auth;
   if (url.isNotEmpty && key.isNotEmpty) {
+    SupabaseClient? oauthClient;
     try {
-      await Supabase.initialize(url: url, anonKey: key);
-      auth = SupabaseAuthService(Supabase.instance.client, url: url, publicKey: key);
+      await Supabase.initialize(url: url, anonKey: key)
+          .timeout(const Duration(seconds: 6));
+      oauthClient = Supabase.instance.client;
     } catch (_) {
-      // The interface stays usable and reports a configuration error on submit.
+      // Email/password uses our server, not Google SDK/local storage. A failed
+      // optional OAuth initialization must never disable all account access.
     }
+    auth = SupabaseAuthService(oauthClient, url: url, publicKey: key);
   }
   runApp(VantoPayApp(auth: auth));
 }
