@@ -22,24 +22,24 @@ class SupabaseAuthService implements AuthService {
     http.Client? transport, Uri? apiUri,
   }) : _transport = transport ?? http.Client(),
        _apiUri = apiUri ?? Uri.base.resolve('/api/auth') {
-    _authSubscription = client.auth.onAuthStateChange.listen((event) {
+    _authSubscription = client?.auth.onAuthStateChange.listen((event) {
       if (event.session != null) {
         unawaited(_exchangeOAuth(event.session!));
       }
     });
     _ready = _restore();
   }
-  final SupabaseClient client;
+  final SupabaseClient? client;
   final String url;
   final String publicKey;
   final http.Client _transport;
   final Uri _apiUri;
   late final Future<void> _ready;
-  late final StreamSubscription<AuthState> _authSubscription;
+  late final StreamSubscription<AuthState>? _authSubscription;
   int _requestVersion = 0;
 
   Future<void> dispose() async {
-    await _authSubscription.cancel();
+    await _authSubscription?.cancel();
     await _changes.close();
     _transport.close();
   }
@@ -64,7 +64,7 @@ class SupabaseAuthService implements AuthService {
     final response = await _transport.post(_apiUri,
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'action': action, ...values}),
-    ).timeout(const Duration(seconds: 40));
+    ).timeout(Duration(seconds: action == 'status' ? 6 : 35));
     Map<String, dynamic> data;
     try {
       data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -90,8 +90,8 @@ class SupabaseAuthService implements AuthService {
 
   Future<void> _restore() async {
     try {
-      if (client.auth.currentSession != null) {
-        await _exchangeOAuth(client.auth.currentSession!);
+      if (client?.auth.currentSession != null) {
+        await _exchangeOAuth(client!.auth.currentSession!);
       } else {
         await _request('status');
       }
@@ -106,7 +106,7 @@ class SupabaseAuthService implements AuthService {
     try {
       await _request('oauth', {'access_token': session.accessToken, 'refresh_token': session.refreshToken});
       // Tokens live only in encrypted HttpOnly server cookies after exchange.
-      await client.auth.signOut(scope: SignOutScope.local);
+      await client?.auth.signOut(scope: SignOutScope.local);
     } catch (error) {
       _signedIn = false;
       _changes.addError(error);
@@ -144,7 +144,11 @@ class SupabaseAuthService implements AuthService {
     if ((settings['external'] as Map<String, dynamic>?)?['google'] != true) {
       throw const AuthException('provider is not enabled', code: 'provider_disabled');
     }
-    final opened = await client.auth.signInWithOAuth(
+    final oauthClient = client;
+    if (oauthClient == null) {
+      throw const AuthException('Google unavailable', code: 'provider_disabled');
+    }
+    final opened = await oauthClient.auth.signInWithOAuth(
       OAuthProvider.google,
       redirectTo: redirectUrl,
     );
@@ -162,7 +166,7 @@ class SupabaseAuthService implements AuthService {
   @override
   Future<void> signOut() async {
     await _request('logout');
-    await client.auth.signOut(scope: SignOutScope.local);
+    await client?.auth.signOut(scope: SignOutScope.local);
   }
 
 }
@@ -186,6 +190,7 @@ String friendlyAuthError(Object error) {
         return 'Escolha uma senha mais forte, com pelo menos 8 caracteres.';
       case 'provider_disabled':
         return 'O acesso com Google ainda precisa ser ativado pelo VantoPay. Use seu e-mail por enquanto.';
+      case 'forbidden':
       case 'server_configuration':
       case 'service_unavailable':
         return 'O serviço de acesso está temporariamente indisponível. Tente novamente em instantes.';

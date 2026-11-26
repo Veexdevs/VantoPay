@@ -78,7 +78,9 @@ return async function handler(req, res) {
       const email = String(body.email || '').trim().toLowerCase();
       const password = body.password;
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254 || typeof password !== 'string' || password.length > 256) fail('invalid_request');
-      await limit(`email:${email}`, 15, 3600);
+      // Keep password attempts bounded without a shared hour-long lockout
+      // caused by a few signup/retry/verification attempts. OTP limits remain separate.
+      await limit(`${action}:${email}`, action === 'login' ? 30 : 10, 600);
       if (action === 'signup') {
         const displayName = String(body.display_name || '').trim();
         if (password.length < 8 || displayName.length < 3 || displayName.length > 80) fail('invalid_request');

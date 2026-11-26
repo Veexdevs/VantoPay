@@ -67,4 +67,22 @@ void main() {
       throwsA(isA<AuthException>().having((e) => e.code, 'code', 'service_unavailable')));
     expect(service.isSignedIn, false);
   });
+  test('email signup and login work even when optional OAuth SDK is unavailable', () async {
+    final actions = <String>[];
+    final service = SupabaseAuthService(null, url: 'https://example.supabase.co',
+      publicKey: 'public-key', apiUri: Uri.parse('https://vantopay.vercel.app/api/auth'),
+      transport: MockClient((request) async {
+        final action = (jsonDecode(request.body) as Map<String, dynamic>)['action'];
+        actions.add(action as String);
+        return http.Response(jsonEncode({'verified': action == 'login',
+          'pending': action == 'signup', 'email': 'teste@example.com'}), 200);
+      }));
+    addTearDown(service.dispose);
+    expect(await service.signUp('Pessoa', 'teste@example.com', 'password123'), false);
+    expect(service.needsVerification, true);
+    await service.signIn('teste@example.com', 'password123');
+    expect(service.isSignedIn, true);
+    expect(actions, ['status', 'signup', 'login']);
+  });
+
 }
